@@ -100,20 +100,25 @@ export function Fretboard({
   const boardTop = 12;
   const boardBottom = height - 16;
   const cueIndex = cue ? strings.indexOf(cue.string) : -1;
-  const cuePad = cueIndex >= 0 ? 20 : 0;
+  const cueW = cue && cueIndex >= 0 ? Math.max(52, 20 + [...cue.text].length * 12) : 0;
+  const cuePad = cueW ? 20 : 0;
+  const cueSidePad = cueW ? Math.max(0, Math.ceil(cueW * 0.6) - 8) : 0;
+  const viewX = lefty ? 0 : -cueSidePad;
+  const viewW = width + cueSidePad;
   const cueLayout =
     cue && cueIndex >= 0
       ? {
           x: lefty ? width - 16 : 16,
           y: TOP + cueIndex * GAP - 26,
-          w: Math.max(52, 20 + cue.text.length * 11),
+          w: cueW,
         }
       : null;
 
   return (
     <svg
       className="fretboard"
-      viewBox={`0 ${-cuePad} ${width} ${height + cuePad}`}
+      viewBox={`${viewX} ${-cuePad} ${viewW} ${height + cuePad}`}
+      preserveAspectRatio="xMidYMid meet"
       role="img"
       aria-label={t(locale, "fretboard.aria")}
     >

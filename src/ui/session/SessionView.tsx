@@ -10,7 +10,10 @@ import { remainingLabel } from "../../srs/session";
 import { Fretboard, type Mark } from "../fretboard/Fretboard";
 import { formatMs, sleep } from "../format";
 import { useStore } from "../store";
+import { useMediaQuery } from "../useMediaQuery";
 import { useT } from "../useT";
+
+const PHONE_LANDSCAPE = "(orientation: landscape) and (max-height: 560px)";
 
 interface Feedback {
   correct: boolean;
@@ -53,6 +56,15 @@ export function SessionView() {
 
   const [armedAt, setArmedAt] = useState<number | null>(null);
   const armedAtRef = useRef<number | null>(null);
+  const phoneLandscape = useMediaQuery(PHONE_LANDSCAPE);
+  const [immerseOverride, setImmerseOverride] = useState<boolean | null>(null);
+  const wasLandscape = useRef(phoneLandscape);
+  const immersive = immerseOverride ?? phoneLandscape;
+
+  useEffect(() => {
+    if (wasLandscape.current && !phoneLandscape) setImmerseOverride(null);
+    wasLandscape.current = phoneLandscape;
+  }, [phoneLandscape]);
 
   const question = session?.questions[session.index];
   const timing = timingFor(profile.guitarInHand);
@@ -136,7 +148,7 @@ export function SessionView() {
   if (!session) return null;
   if (!question) {
     return (
-      <section className="session">
+      <section className={`session${immersive ? " is-immersive" : ""}`}>
         <p className="lede">{t("session.saving")}</p>
       </section>
     );
@@ -238,7 +250,7 @@ export function SessionView() {
   const locateNeedAll = question.kind === "locate" && !question.findOne && question.answers.length > 1;
 
   return (
-    <section className="session">
+    <section className={`session${immersive ? " is-immersive" : ""}`}>
       <header className="session-bar">
         <div>
           <p className="eyebrow">{t("today.eyebrow")}</p>
@@ -253,9 +265,18 @@ export function SessionView() {
             {remainingLabel(session, locale)}
           </p>
         </div>
-        <button type="button" className="text-btn" onClick={() => void exitSession()}>
-          {t("session.later")}
-        </button>
+        <div className="header-actions">
+          <button
+            type="button"
+            className="text-btn"
+            onClick={() => setImmerseOverride(immersive ? false : true)}
+          >
+            {immersive ? t("session.immerseExit") : t("session.immerse")}
+          </button>
+          <button type="button" className="text-btn" onClick={() => void exitSession()}>
+            {t("session.later")}
+          </button>
+        </div>
       </header>
 
       <p className="session-prompt">
@@ -275,27 +296,29 @@ export function SessionView() {
         <small ref={secRef}></small>
       </div>
 
-      <Fretboard
-        lefty={profile.lefty}
-        locale={locale}
-        showNames={false}
-        showFretNumbers={profile.showFretNumbers}
-        activeStrings={feedback ? "all" : [question.string]}
-        marks={marks}
-        clickable={question.kind === "locate" && !feedback ? [question.string] : false}
-        cue={
-          !feedback && question.kind === "locate"
-            ? {
-                string: question.string,
-                text: t(question.findOne ? "cue.locateOne" : "cue.locateAll", {
-                  note: noteLabel(question.pitch),
-                }),
-              }
-            : null
-        }
-        guideKey={session.questionShownAt}
-        onPress={(_string, fret) => toggleFret(fret)}
-      />
+      <div className="fretboard-slot">
+        <Fretboard
+          lefty={profile.lefty}
+          locale={locale}
+          showNames={false}
+          showFretNumbers={profile.showFretNumbers}
+          activeStrings={feedback ? "all" : [question.string]}
+          marks={marks}
+          clickable={question.kind === "locate" && !feedback ? [question.string] : false}
+          cue={
+            !feedback && question.kind === "locate"
+              ? {
+                  string: question.string,
+                  text: t(question.findOne ? "cue.locateOne" : "cue.locateAll", {
+                    note: noteLabel(question.pitch),
+                  }),
+                }
+              : null
+          }
+          guideKey={session.questionShownAt}
+          onPress={(_string, fret) => toggleFret(fret)}
+        />
+      </div>
 
       {question.kind === "identify" ? (
         <div className="choices" role="group" aria-label={t("session.notesAria")}>
