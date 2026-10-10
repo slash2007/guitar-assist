@@ -1,6 +1,6 @@
 import { createContext, useContext, useEffect, useMemo, useState, type ReactNode } from "react";
-import { unlockAudio } from "../audio/play";
-import { cancelSpeech, unlockSpeech } from "../audio/speak";
+import { cancelSpeech } from "../audio/speak";
+import { armOutputUnlock, primeOutput } from "../audio/unlock";
 import {
   defaultDaily,
   defaultProfile,
@@ -49,11 +49,14 @@ interface StoreValue {
   startPractice: () => Promise<void>;
   resumeSession: () => Promise<void>;
   commitAnswer: (input: {
-    cardId: CardId;
     correct: boolean;
-    partial?: boolean;
-    rating: Attempt["rating"];
-    latencyMs: number;
+    results: Array<{
+      cardId: CardId;
+      correct: boolean;
+      partial?: boolean;
+      rating: Attempt["rating"];
+      latencyMs: number;
+    }>;
   }) => Promise<{ ended: boolean; summary: SessionSummary | null }>;
   exitSession: () => Promise<void>;
   updateProfile: (patch: Partial<Profile>) => Promise<void>;
@@ -110,6 +113,11 @@ export function StoreProvider({ children }: { children: ReactNode }) {
     void db.saveSession(clipped);
   }, [ready, session, profile.stage]);
 
+  useEffect(() => {
+    if (!ready) return;
+    return armOutputUnlock();
+  }, [ready]);
+
   const cardMap = useMemo(() => new Map(cards.map((card) => [card.id, card])), [cards]);
 
   const value = useMemo<StoreValue>(() => {
@@ -135,8 +143,7 @@ export function StoreProvider({ children }: { children: ReactNode }) {
         setAdvanceTo(null);
       },
       async startPractice() {
-        unlockSpeech();
-        void unlockAudio();
+        primeOutput();
         const now = new Date();
         const today = ensureDaily(daily, now);
         const built = buildReviewQueue({
@@ -159,6 +166,7 @@ export function StoreProvider({ children }: { children: ReactNode }) {
           questions: built.questions,
           index: 0,
           answered: 0,
+          correctCount: 0,
           dueCount: built.dueCount,
           newIntroduced: 0,
         };
@@ -170,36 +178,48 @@ export function StoreProvider({ children }: { children: ReactNode }) {
       async commitAnswer(input) {
         if (!session) return { ended: false, summary: null };
         const now = new Date();
-        const existing = cardMap.get(input.cardId);
-        const unseen = isUnseen(existing);
-        const base = existing ?? { id: input.cardId, fsrs: emptyFsrs(now) };
-        const updated: CardState = { id: input.cardId, fsrs: applyRating(base.fsrs, input.rating, now) };
-        const attempt: Attempt = {
-          id: uid(),
-          cardId: input.cardId,
-          at: now.toISOString(),
-          correct: input.correct,
-          partial: input.partial,
-          latencyMs: input.latencyMs,
-          rating: input.rating,
-          guitarInHand: profile.guitarInHand,
-        };
-        const nextCards = [...cards.filter((card) => card.id !== input.cardId), updated];
-        const nextAttempts = [...attempts, attempt];
+        const results = input.results.length > 0 ? input.results : [];
+        const updatedCards: CardState[] = [];
+        const newAttempts: Attempt[] = [];
+        let unseenCount = 0;
+        let nextCards = cards;
+        for (const result of results) {
+          const existing = cardMap.get(result.cardId) ?? nextCards.find((card) => card.id === result.cardId);
+          if (isUnseen(existing)) unseenCount += 1;
+          const base = existing ?? { id: result.cardId, fsrs: emptyFsrs(now) };
+          const updated: CardState = { id: result.cardId, fsrs: applyRating(base.fsrs, result.rating, now) };
+          updatedCards.push(updated);
+          nextCards = [...nextCards.filter((card) => card.id !== result.cardId), updated];
+          newAttempts.push({
+            id: uid(),
+            cardId: result.cardId,
+            at: now.toISOString(),
+            correct: result.correct,
+            partial: result.partial,
+            latencyMs: result.latencyMs,
+            rating: result.rating,
+            guitarInHand: profile.guitarInHand,
+          });
+        }
+        const nextAttempts = [...attempts, ...newAttempts];
         let nextDaily = ensureDaily(daily, now);
-        if (unseen) nextDaily = { ...nextDaily, newIntroduced: nextDaily.newIntroduced + 1 };
+        if (unseenCount) nextDaily = { ...nextDaily, newIntroduced: nextDaily.newIntroduced + unseenCount };
         let nextProfile = { ...profile, lastSessionDate: localDateKey(now) };
         let nextSession: ActiveSession = {
           ...session,
           index: session.index + 1,
           answered: session.answered + 1,
+          correctCount: (session.correctCount ?? 0) + (input.correct ? 1 : 0),
           questionShownAt: now.toISOString(),
-          newIntroduced: session.newIntroduced + (unseen ? 1 : 0),
+          newIntroduced: session.newIntroduced + unseenCount,
         };
 
         setCards(nextCards);
         setAttempts(nextAttempts);
-        await Promise.all([db.saveCard(updated), db.saveAttempt(attempt)]);
+        await Promise.all([
+          ...updatedCards.map((card) => db.saveCard(card)),
+          ...newAttempts.map((attempt) => db.saveAttempt(attempt)),
+        ]);
 
         if (nextSession.index >= nextSession.questions.length) {
           const more = buildReviewQueue({
@@ -209,7 +229,10 @@ export function StoreProvider({ children }: { children: ReactNode }) {
             attempts: nextAttempts,
             targetCount: targetQuestionCount(),
             rng: randomRng,
-            skip: new Set(nextSession.questions.map((item) => item.cardId)),
+            skip: new Set([
+              ...nextSession.questions.map((item) => item.cardId),
+              ...nextAttempts.filter((item) => item.at >= session.startedAt).map((item) => item.cardId),
+            ]),
           });
           if (more.questions.length > 0) {
             nextSession = {
@@ -242,7 +265,7 @@ export function StoreProvider({ children }: { children: ReactNode }) {
           at: now.toISOString(),
           kind: session.kind,
           answered: nextSession.answered,
-          correct: sessionAttempts.filter((item) => item.correct).length,
+          correct: nextSession.correctCount ?? 0,
           medianMs: median(sessionAttempts.map((item) => item.latencyMs)),
           stage: profile.stage,
           advancedTo,
@@ -270,8 +293,7 @@ export function StoreProvider({ children }: { children: ReactNode }) {
           await db.saveSession(null);
           return;
         }
-        unlockSpeech();
-        void unlockAudio();
+        primeOutput();
         const now = new Date();
         const next = { ...clipped, paused: false, questionShownAt: now.toISOString() };
         setSession(next);

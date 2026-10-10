@@ -11,13 +11,15 @@ const identify = (fret: IdentifyQuestion["fret"] = 3): IdentifyQuestion => ({
   options: ["C", "C#", "D", "D#", "E", "F", "F#", "G", "G#", "A", "A#", "B"],
 });
 
-const locate = (findOne: boolean): LocateQuestion => ({
+const locate = (need: number, strings: LocateQuestion["strings"] = [6]): LocateQuestion => ({
   kind: "locate",
   cardId: "loc:6:G",
   string: 6,
   pitch: "G",
-  answers: [3],
-  findOne,
+  need,
+  pool: [{ string: 6, fret: 3 }],
+  targets: ["loc:6:G"],
+  strings,
 });
 
 describe("spokenPrompt", () => {
@@ -30,14 +32,16 @@ describe("spokenPrompt", () => {
   });
 
   it("asks to find the note in Chinese", () => {
-    expect(spokenPrompt(locate(true), "zh")).toBe("六弦，找一个 G");
-    expect(spokenPrompt(locate(false), "zh")).toBe("六弦，找齐 G");
+    expect(spokenPrompt(locate(1), "zh")).toBe("六弦，找一个 G");
+    expect(spokenPrompt(locate(2), "zh")).toBe("六弦，找齐 G");
+    expect(spokenPrompt(locate(2, [6, 5]), "zh")).toBe("找 2 个 G");
   });
 
   it("uses short English prompts", () => {
     expect(spokenPrompt(identify(3), "en")).toBe("string 6, fret 3");
     expect(spokenPrompt(identify(0), "en")).toBe("string 6, open");
-    expect(spokenPrompt(locate(true), "en")).toBe("string 6, find one G");
-    expect(spokenPrompt(locate(false), "en")).toBe("string 6, find every G");
+    expect(spokenPrompt(locate(1), "en")).toBe("string 6, find one G");
+    expect(spokenPrompt(locate(2), "en")).toBe("string 6, find every G");
+    expect(spokenPrompt(locate(2, [6, 5]), "en")).toBe("Find 2 G's");
   });
 });

@@ -2,9 +2,11 @@ import { useEffect, useMemo, useRef, useState } from "react";
 import { playPitch, playPitches } from "../../audio/play";
 import { spokenPrompt } from "../../audio/prompt";
 import { cancelSpeech, speak } from "../../audio/speak";
-import { noteLabel, ratingLabel, stringFullLabel, stringShortLabel } from "../../domain/labels";
-import { rateIdentify, rateLocate, timingFor } from "../../domain/rating";
-import { CHROMATIC_PITCHES, type ChromaticPitch, type Fret } from "../../domain/types";
+import { huntPrompt, noteLabel, ratingLabel, stringFullLabel, stringShortLabel } from "../../domain/labels";
+import { applyLocateTap, isLocateHunt, locateAllowPartial, locateCardUpdates, locateHits } from "../../domain/questions";
+import { locateAverageMs, locateTimeoutMs, rateIdentify, rateLocate, timingFor } from "../../domain/rating";
+import { sameSpot } from "../../domain/hunt";
+import { CHROMATIC_PITCHES, type BoardSpot, type ChromaticPitch, type Fret, type StringNum } from "../../domain/types";
 import { t as translate } from "../../i18n/t";
 import { remainingLabel } from "../../srs/session";
 import { Fretboard, type Mark } from "../fretboard/Fretboard";
@@ -48,9 +50,13 @@ const PIANO_COL: Record<ChromaticPitch, number> = {
 export function SessionView() {
   const { profile, session, commitAnswer, exitSession } = useStore();
   const { t, locale } = useT();
-  const [pickedFrets, setPickedFrets] = useState<Fret[]>([]);
+  const [picked, setPicked] = useState<BoardSpot[]>([]);
+  const [nudge, setNudge] = useState<{ spot: BoardSpot; id: number } | null>(null);
   const [feedback, setFeedback] = useState<Feedback | null>(null);
   const busy = useRef(false);
+  const pickedRef = useRef<BoardSpot[]>([]);
+  const nudgeTimer = useRef<number>(0);
+  const nudgeId = useRef(0);
   const timerRef = useRef<HTMLDivElement>(null);
   const secRef = useRef<HTMLElement>(null);
 
@@ -68,18 +74,27 @@ export function SessionView() {
 
   const question = session?.questions[session.index];
   const timing = timingFor(profile.guitarInHand);
+  const questionTimeoutMs =
+    question?.kind === "locate"
+      ? locateTimeoutMs(question.need, profile.guitarInHand)
+      : timing.timeoutMs;
   const drainStyle = useMemo(() => {
     if (!armedAt) return { animationName: "none" };
     const elapsed = Math.max(0, Date.now() - armedAt);
-    const delay = Math.min(elapsed, timing.timeoutMs);
+    const delay = Math.min(elapsed, questionTimeoutMs);
     return {
-      animationDuration: `${timing.timeoutMs}ms`,
+      animationDuration: `${questionTimeoutMs}ms`,
       animationDelay: `-${delay}ms`,
     };
-  }, [armedAt, timing.timeoutMs]);
+  }, [armedAt, questionTimeoutMs]);
+
+  useEffect(() => () => window.clearTimeout(nudgeTimer.current), []);
 
   useEffect(() => {
-    setPickedFrets([]);
+    setPicked([]);
+    pickedRef.current = [];
+    setNudge(null);
+    window.clearTimeout(nudgeTimer.current);
     setFeedback(null);
     busy.current = false;
     armedAtRef.current = null;
@@ -116,7 +131,7 @@ export function SessionView() {
       return;
     }
     const sync = () => {
-      const remain = Math.max(0, timing.timeoutMs - (Date.now() - armedAt));
+      const remain = Math.max(0, questionTimeoutMs - (Date.now() - armedAt));
       timerRef.current?.classList.toggle("is-hot", remain <= 2000);
       if (secRef.current) {
         secRef.current.textContent = translate(locale, "session.timer", {
@@ -132,18 +147,18 @@ export function SessionView() {
     };
     raf = window.requestAnimationFrame(loop);
     return () => window.cancelAnimationFrame(raf);
-  }, [session, armedAt, session?.paused, feedback, timing.timeoutMs, locale]);
+  }, [session, armedAt, session?.paused, feedback, questionTimeoutMs, locale]);
 
   useEffect(() => {
     if (!session || feedback || session.paused || !armedAt) return;
-    const remain = timing.timeoutMs - (Date.now() - armedAt);
+    const remain = questionTimeoutMs - (Date.now() - armedAt);
     const id = window.setTimeout(() => {
       if (question?.kind === "locate") void finishLocate(true);
       else void finishIdentify(null);
     }, Math.max(0, remain));
     return () => window.clearTimeout(id);
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [armedAt, session?.index, feedback, question?.kind, timing.timeoutMs]);
+  }, [armedAt, session?.index, feedback, question?.kind, questionTimeoutMs]);
 
   if (!session) return null;
   if (!question) {
@@ -155,16 +170,21 @@ export function SessionView() {
   }
 
   const shownAtMs = new Date(session.questionShownAt).getTime();
+  const hunt = question.kind === "locate" && isLocateHunt(question);
+  const locateStrings = question.kind === "locate" ? question.strings : [question.string];
   const marks: Mark[] = feedback
     ? feedback.marks
     : question.kind === "identify"
       ? [{ string: question.string, fret: question.fret, tone: "target" }]
-      : pickedFrets.map((fret) => ({ string: question.string, fret, tone: "selected" }));
+      : [
+          ...picked.map((spot) => ({ ...spot, tone: "correct" as const })),
+          ...(nudge ? [{ ...nudge.spot, tone: "wrong" as const, id: String(nudge.id) }] : []),
+        ];
 
   function measureLatency(timedOut: boolean): number {
-    if (timedOut) return timing.timeoutMs;
+    if (timedOut) return questionTimeoutMs;
     const start = armedAtRef.current ?? shownAtMs;
-    return Math.min(timing.timeoutMs, Math.max(0, Date.now() - start));
+    return Math.min(questionTimeoutMs, Math.max(0, Date.now() - start));
   }
 
   async function finishIdentify(choice: ChromaticPitch | null) {
@@ -183,71 +203,84 @@ export function SessionView() {
     });
     if (profile.answerSound) void playPitch(question.string, question.fret);
     await sleep(revealMs(correct));
-    await commitAnswer({ cardId: question.cardId, correct, rating, latencyMs });
+    await commitAnswer({
+      correct,
+      results: [{ cardId: question.cardId, correct, rating, latencyMs }],
+    });
   }
 
-  async function finishLocate(timedOut = false, selectedFrets = pickedFrets) {
+  async function finishLocate(timedOut = false, selected = pickedRef.current) {
     if (!session || question?.kind !== "locate" || busy.current || feedback) return;
     busy.current = true;
     cancelSpeech();
-    const latencyMs = measureLatency(timedOut);
+    const elapsedMs = measureLatency(timedOut);
     const grade = rateLocate({
-      selected: selectedFrets,
-      answers: question.answers,
-      findOne: question.findOne,
-      latencyMs,
+      selected,
+      pool: question.pool,
+      need: question.need,
+      elapsedMs,
       guitarInHand: profile.guitarInHand,
+      allowPartial: locateAllowPartial(question),
     });
-    const selected = new Set(selectedFrets);
+    const latencyMs = locateAverageMs(elapsedMs, question.need);
+    const selectedKeys = new Set(selected.map((spot) => `${spot.string}:${spot.fret}`));
     const marksNext: Mark[] = [
-      ...question.answers.map((fret) => ({
-        string: question.string,
-        fret,
-        tone: selected.has(fret) ? ("correct" as const) : ("missed" as const),
+      ...question.pool.map((spot) => ({
+        ...spot,
+        tone: selectedKeys.has(`${spot.string}:${spot.fret}`) ? ("correct" as const) : ("missed" as const),
       })),
-      ...selectedFrets
-        .filter((fret) => !question.answers.includes(fret))
-        .map((fret) => ({ string: question.string, fret, tone: "wrong" as const })),
+      ...selected
+        .filter((spot) => !question.pool.some((item) => sameSpot(item, spot)))
+        .map((spot) => ({ ...spot, tone: "wrong" as const })),
     ];
     setFeedback({
       correct: grade.correct,
       partial: grade.partial,
       marks: marksNext,
-      latencyMs,
+      latencyMs: grade.correct ? latencyMs : elapsedMs,
       rating: grade.rating,
     });
     if (profile.answerSound) {
       void playPitches(
-        question.answers.map((fret) => ({ string: question.string, fret })),
+        question.pool.map((spot) => ({ string: spot.string, fret: spot.fret })),
         1.1,
       );
     }
     await sleep(revealMs(grade.correct, grade.partial));
     await commitAnswer({
-      cardId: question.cardId,
       correct: grade.correct,
-      partial: grade.partial,
-      rating: grade.rating,
-      latencyMs,
+      results: locateCardUpdates(question, selected, grade.correct, grade.rating, latencyMs).map((item) => ({
+        ...item,
+        partial: grade.partial,
+      })),
     });
   }
 
-  function toggleFret(fret: Fret) {
-    if (feedback || question?.kind !== "locate" || busy.current) return;
-    const instant = question.findOne || question.answers.length === 1;
-    if (instant) {
-      setPickedFrets([fret]);
-      void finishLocate(false, [fret]);
-      return;
-    }
-    const next = pickedFrets.includes(fret)
-      ? pickedFrets.filter((item) => item !== fret)
-      : [...pickedFrets, fret];
-    setPickedFrets(next);
-    if (next.length >= question.answers.length) void finishLocate(false, next);
+  function flashMiss(spot: BoardSpot) {
+    nudgeId.current += 1;
+    const id = nudgeId.current;
+    setNudge({ spot, id });
+    window.clearTimeout(nudgeTimer.current);
+    nudgeTimer.current = window.setTimeout(() => {
+      setNudge((current) => (current?.id === id ? null : current));
+    }, 1600);
   }
 
-  const locateNeedAll = question.kind === "locate" && !question.findOne && question.answers.length > 1;
+  function toggleSpot(string: StringNum, fret: Fret) {
+    if (feedback || question?.kind !== "locate" || busy.current) return;
+    const result = applyLocateTap(question, picked, { string, fret });
+    if (result.ignored) {
+      flashMiss({ string, fret });
+      return;
+    }
+    setNudge(null);
+    window.clearTimeout(nudgeTimer.current);
+    pickedRef.current = result.selected;
+    setPicked(result.selected);
+    if (result.done) void finishLocate(false, result.selected);
+  }
+
+  const locateCollect = question.kind === "locate" && question.need > 1;
 
   return (
     <section className={`session${immersive ? " is-immersive" : ""}`}>
@@ -257,10 +290,12 @@ export function SessionView() {
           <p className="session-meta">
             {question.kind === "identify"
               ? t("session.goalIdentify", { string: stringShortLabel(question.string, locale) })
-              : t("session.goalLocate", {
-                  string: stringShortLabel(question.string, locale),
-                  note: noteLabel(question.pitch),
-                })}
+              : hunt
+                ? huntPrompt(question.need, question.pitch, locale)
+                : t("session.goalLocate", {
+                    string: stringShortLabel(question.string, locale),
+                    note: noteLabel(question.pitch),
+                  })}
             {" · "}
             {remainingLabel(session, locale)}
           </p>
@@ -282,10 +317,12 @@ export function SessionView() {
       <p className="session-prompt">
         {question.kind === "identify"
           ? t("session.identifyPrompt")
-          : t(question.findOne ? "session.locateOne" : "session.locateAll", {
-              string: stringFullLabel(question.string, locale),
-              note: noteLabel(question.pitch),
-            })}
+          : hunt
+            ? huntPrompt(question.need, question.pitch, locale)
+            : t(question.need === 1 ? "session.locateOne" : "session.locateAll", {
+                string: stringFullLabel(question.string, locale),
+                note: noteLabel(question.pitch),
+              })}
       </p>
       {profile.guitarInHand ? <p className="hint">{t("session.playFirst")}</p> : null}
 
@@ -302,21 +339,23 @@ export function SessionView() {
           locale={locale}
           showNames={false}
           showFretNumbers={profile.showFretNumbers}
-          activeStrings={feedback ? "all" : [question.string]}
+          activeStrings={feedback ? "all" : locateStrings}
           marks={marks}
-          clickable={question.kind === "locate" && !feedback ? [question.string] : false}
+          clickable={question.kind === "locate" && !feedback ? locateStrings : false}
           cue={
             !feedback && question.kind === "locate"
-              ? {
-                  string: question.string,
-                  text: t(question.findOne ? "cue.locateOne" : "cue.locateAll", {
-                    note: noteLabel(question.pitch),
-                  }),
-                }
+              ? hunt
+                ? { text: huntPrompt(question.need, question.pitch, locale) }
+                : {
+                    string: question.string,
+                    text: t(question.need === 1 ? "cue.locateOne" : "cue.locateAll", {
+                      note: noteLabel(question.pitch),
+                    }),
+                  }
               : null
           }
           guideKey={session.questionShownAt}
-          onPress={(_string, fret) => toggleFret(fret)}
+          onPress={(string, fret) => toggleSpot(string, fret)}
         />
       </div>
 
@@ -346,14 +385,11 @@ export function SessionView() {
             );
           })}
         </div>
-      ) : locateNeedAll ? (
-        <p className="hint locate-hint">
-          {t("session.locateNeed", { a: pickedFrets.length, b: question.answers.length })}
-          {pickedFrets.length > 0 && !feedback ? (
-            <button type="button" className="text-btn" onClick={() => void finishLocate(false, pickedFrets)}>
-              {t("session.locateSubmit")}
-            </button>
-          ) : null}
+      ) : locateCollect ? (
+        <p className={`hint locate-hint${nudge ? " is-miss" : ""}`}>
+          {t("session.locateNeed", { a: locateHits(question, picked).length, b: question.need })}
+          {" · "}
+          {nudge ? t("session.locateMiss") : t("session.locateHuntHint")}
         </p>
       ) : (
         <p className="hint">{t("session.locateTap")}</p>

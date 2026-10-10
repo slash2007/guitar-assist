@@ -1,6 +1,16 @@
 import { detectLocale } from "../i18n/locale";
+import { huntPool } from "./hunt";
 import { localDateKey } from "./stats";
-import type { ActiveSession, DailyMinutes, DailyProgress, Profile, SessionKind, SessionSummary } from "./types";
+import type {
+  ActiveSession,
+  DailyMinutes,
+  DailyProgress,
+  LocateQuestion,
+  Profile,
+  Question,
+  SessionKind,
+  SessionSummary,
+} from "./types";
 
 const MINUTES: DailyMinutes[] = [4, 6, 8, 10];
 
@@ -57,19 +67,58 @@ export function normalizeSession(raw: ActiveSession | null | undefined, now = ne
   const kind = (raw.kind as string) === "extra" ? "extra" : (raw.kind as string) === "placement" ? null : "practice";
   if (!kind) return null;
   if (localDateKey(new Date(raw.startedAt)) !== localDateKey(now)) return null;
-  if (raw.index >= raw.questions.length) return null;
+  const questions = raw.questions.map(normalizeQuestion).filter((item): item is Question => item !== null);
+  if (questions.length === 0 || raw.index >= questions.length) return null;
   return {
     kind,
     startedAt: raw.startedAt,
     questionShownAt: raw.questionShownAt || now.toISOString(),
     durationMs: raw.durationMs || 6 * 60_000,
-    questions: raw.questions,
+    questions,
     index: Math.max(0, raw.index),
     answered: Math.max(0, raw.answered),
+    correctCount: Math.max(0, raw.correctCount ?? 0),
     dueCount: raw.dueCount ?? 0,
     newIntroduced: raw.newIntroduced ?? 0,
     paused: raw.paused,
   };
+}
+
+function normalizeQuestion(raw: Question): Question | null {
+  if (!raw || (raw.kind !== "identify" && raw.kind !== "locate")) return null;
+  if (raw.kind === "identify") {
+    if (!raw.cardId || raw.string == null || raw.fret == null || !raw.answer) return null;
+    return raw;
+  }
+  const loc = raw as LocateQuestion & { answers?: number[]; findOne?: boolean };
+  if (!loc.cardId || !loc.pitch || loc.string == null) return null;
+  if (Array.isArray(loc.pool) && loc.need >= 1 && Array.isArray(loc.strings) && loc.strings.length > 0) {
+    return {
+      kind: "locate",
+      cardId: loc.cardId,
+      string: loc.string,
+      pitch: loc.pitch,
+      need: loc.need,
+      pool: loc.pool,
+      targets: loc.targets?.length ? loc.targets : [loc.cardId],
+      strings: loc.strings,
+    };
+  }
+  if (Array.isArray(loc.answers) && loc.answers.length > 0) {
+    const pool = huntPool(loc.pitch, [loc.string]);
+    const mapped = loc.answers.map((fret) => ({ string: loc.string, fret: fret as LocateQuestion["pool"][number]["fret"] }));
+    return {
+      kind: "locate",
+      cardId: loc.cardId,
+      string: loc.string,
+      pitch: loc.pitch,
+      need: loc.findOne ? 1 : mapped.length,
+      pool: mapped.length > 0 ? mapped : pool,
+      targets: [loc.cardId],
+      strings: [loc.string],
+    };
+  }
+  return null;
 }
 
 export function normalizeSummaries(raw: SessionSummary[] | null | undefined): SessionSummary[] {

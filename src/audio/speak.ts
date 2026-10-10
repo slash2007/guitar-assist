@@ -12,12 +12,22 @@ export function cancelSpeech(): void {
   }
 }
 
+let primed = false;
+
 export function unlockSpeech(): void {
   if (typeof window === "undefined" || !window.speechSynthesis) return;
   try {
     window.speechSynthesis.resume();
+    if (primed) return;
+    primed = true;
+    const tap = new SpeechSynthesisUtterance(" ");
+    tap.volume = 0;
+    tap.rate = 2;
+    tap.lang = "zh-CN";
+    window.speechSynthesis.speak(tap);
+    window.speechSynthesis.resume();
   } catch {
-    /* ignore */
+    primed = false;
   }
 }
 
@@ -74,7 +84,7 @@ function waitForVoices(): Promise<void> {
       window.clearTimeout(timer);
       resolve();
     };
-    const timer = window.setTimeout(done, 400);
+    const timer = window.setTimeout(done, 2000);
     window.speechSynthesis.addEventListener("voiceschanged", done);
   });
 }

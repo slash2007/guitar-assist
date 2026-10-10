@@ -1,4 +1,5 @@
-import { isIdentifyId, positionsOf, stringOfCard } from "../domain/cards";
+import { isIdentifyId, isLocateId, parseLocateId, positionsOf, stringOfCard } from "../domain/cards";
+import { isMixStage } from "../domain/hunt";
 import { questionFromCard } from "../domain/questions";
 import { shuffle, type Rng } from "../domain/rng";
 import { cardsForStage } from "../domain/stages";
@@ -51,9 +52,15 @@ export function buildReviewQueue(input: QueueInput): BuiltQueue {
   const pickedNew = sortFresh(fresh, input.rng, weak, weakPitch);
   rest.sort((a, b) => compareFill(a, b, input.cards, weak));
 
-  const ordered = assemble(due, pickedNew, rest, input.targetCount, input.rng);
+  const ordered = assemble(due, pickedNew, rest, input.targetCount, input.rng, input.stage, stageCards);
+  const dueLike = (id: CardId) => {
+    const state = input.cards.get(id);
+    return isUnseen(state) || Boolean(state && isDueCard(state, input.now));
+  };
   return {
-    questions: ordered.map((id) => questionFromCard(id, input.stage)),
+    questions: ordered.map((id) =>
+      questionFromCard(id, input.stage, { cards: input.cards, dueLike, rng: input.rng }),
+    ),
     dueCount: due.length,
     newCount: pickedNew.length,
   };
@@ -117,6 +124,8 @@ function assemble(
   rest: CardId[],
   target: number,
   rng: Rng,
+  stage: number,
+  stageCards: CardId[],
 ): CardId[] {
   const pools = [due, fresh, shuffle(rng, rest)];
   const result: CardId[] = [];
@@ -142,6 +151,12 @@ function assemble(
     if (!next) break;
     used.add(next);
     result.push(next);
+    if (isMixStage(stage) && isLocateId(next)) {
+      const pitch = parseLocateId(next).pitch;
+      for (const id of stageCards) {
+        if (isLocateId(id) && parseLocateId(id).pitch === pitch) used.add(id);
+      }
+    }
   }
   return result;
 }

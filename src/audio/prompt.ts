@@ -1,4 +1,5 @@
-import { noteLabel } from "../domain/labels";
+import { huntPrompt, noteLabel } from "../domain/labels";
+import { isLocateHunt } from "../domain/questions";
 import type { Fret, Locale, Question, StringNum } from "../domain/types";
 import { t } from "../i18n/t";
 
@@ -15,11 +16,13 @@ export function spokenFret(fret: Fret, locale: Locale): string {
 }
 
 export function spokenPrompt(question: Question, locale: Locale): string {
-  const string = spokenString(question.string, locale);
   if (question.kind === "identify") {
+    const string = spokenString(question.string, locale);
     return t(locale, "speech.identify", { string, fret: spokenFret(question.fret, locale) });
   }
-  return t(locale, question.findOne ? "speech.locateOne" : "speech.locateAll", {
+  if (isLocateHunt(question)) return huntPrompt(question.need, question.pitch, locale);
+  const string = spokenString(question.string, locale);
+  return t(locale, question.need === 1 ? "speech.locateOne" : "speech.locateAll", {
     string,
     note: noteLabel(question.pitch),
   });

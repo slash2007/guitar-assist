@@ -44,4 +44,29 @@ describe("normalizeSession", () => {
     const next = normalizeSession({ ...base, kind: "review" as never });
     expect(next?.kind).toBe("practice");
   });
+
+  it("migrates old single-string locate questions", () => {
+    const next = normalizeSession({
+      ...base,
+      questions: [
+        {
+          kind: "locate",
+          cardId: "loc:6:E",
+          string: 6,
+          pitch: "E",
+          answers: [0, 12],
+          findOne: false,
+        } as never,
+      ],
+    });
+    expect(next?.questions[0]).toMatchObject({
+      kind: "locate",
+      need: 2,
+      strings: [6],
+      pool: [
+        { string: 6, fret: 0 },
+        { string: 6, fret: 12 },
+      ],
+    });
+  });
 });

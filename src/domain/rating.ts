@@ -1,4 +1,4 @@
-import type { Fret, Rating } from "./types";
+import type { BoardSpot, Rating } from "./types";
 
 export interface Timing {
   timeoutMs: number;
@@ -43,12 +43,22 @@ export function rateIdentify(correct: boolean, latencyMs: number, guitarInHand =
   return 4;
 }
 
+export function locateTimeoutMs(need: number, guitarInHand: boolean): number {
+  const timing = timingFor(guitarInHand);
+  return timing.timeoutMs + (Math.max(1, need) - 1) * timing.locateEasyMs;
+}
+
+export function locateAverageMs(elapsedMs: number, need: number): number {
+  return Math.round(elapsedMs / Math.max(1, need));
+}
+
 export interface LocateGradeInput {
-  selected: readonly Fret[];
-  answers: readonly Fret[];
-  findOne: boolean;
-  latencyMs: number;
+  selected: readonly BoardSpot[];
+  pool: readonly BoardSpot[];
+  need: number;
+  elapsedMs: number;
   guitarInHand?: boolean;
+  allowPartial?: boolean;
 }
 
 export interface LocateGrade {
@@ -59,25 +69,34 @@ export interface LocateGrade {
 
 export function rateLocate(input: LocateGradeInput): LocateGrade {
   const timing = timingFor(Boolean(input.guitarInHand));
-  const selected = uniqueSorted(input.selected);
-  const answers = uniqueSorted(input.answers);
-  const answerSet = new Set(answers);
-  const extra = selected.filter((fret) => !answerSet.has(fret));
-  const hits = selected.filter((fret) => answerSet.has(fret));
+  const need = Math.max(1, input.need);
+  const timeoutMs = locateTimeoutMs(need, Boolean(input.guitarInHand));
+  const hits = input.selected.filter((spot) =>
+    input.pool.some((item) => item.string === spot.string && item.fret === spot.fret),
+  );
+  const extra = input.selected.filter(
+    (spot) => !input.pool.some((item) => item.string === spot.string && item.fret === spot.fret),
+  );
+  const uniqueHits = uniqueSpots(hits);
 
-  if (input.latencyMs >= timing.timeoutMs) {
+  if (input.elapsedMs >= timeoutMs) {
+    if (input.allowPartial && extra.length === 0 && uniqueHits.length > 0 && uniqueHits.length < need) {
+      return { rating: 2, correct: false, partial: true };
+    }
     return { rating: 1, correct: false, partial: false };
   }
-  if (extra.length > 0 || hits.length === 0) {
+  if (extra.length > 0 || uniqueHits.length === 0) {
     return { rating: 1, correct: false, partial: false };
   }
-  if (input.findOne) {
-    return { rating: rateLocateTime(input.latencyMs, timing), correct: true, partial: false };
+  if (uniqueHits.length < need) {
+    if (input.allowPartial) return { rating: 2, correct: false, partial: true };
+    return { rating: 1, correct: false, partial: false };
   }
-  if (hits.length < answers.length) {
-    return { rating: 2, correct: false, partial: true };
-  }
-  return { rating: rateLocateTime(input.latencyMs, timing), correct: true, partial: false };
+  return {
+    rating: rateLocateTime(locateAverageMs(input.elapsedMs, need), timing),
+    correct: true,
+    partial: false,
+  };
 }
 
 function rateLocateTime(latencyMs: number, timing: Timing): Rating {
@@ -99,6 +118,14 @@ export function speedBand(
   return "slow";
 }
 
-function uniqueSorted(frets: readonly Fret[]): Fret[] {
-  return [...new Set(frets)].sort((a, b) => a - b);
+function uniqueSpots(spots: readonly BoardSpot[]): BoardSpot[] {
+  const seen = new Set<string>();
+  const unique: BoardSpot[] = [];
+  for (const spot of spots) {
+    const key = `${spot.string}:${spot.fret}`;
+    if (seen.has(key)) continue;
+    seen.add(key);
+    unique.push(spot);
+  }
+  return unique;
 }

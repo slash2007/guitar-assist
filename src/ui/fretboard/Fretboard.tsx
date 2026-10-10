@@ -8,6 +8,7 @@ export interface Mark {
   string: StringNum;
   fret: Fret;
   tone: "target" | "selected" | "correct" | "missed" | "wrong" | "peek";
+  id?: string;
 }
 
 interface Props {
@@ -21,7 +22,7 @@ interface Props {
   marks?: Mark[];
   heat?: HeatCell[];
   clickable?: boolean | StringNum[];
-  cue?: { string: StringNum; text: string } | null;
+  cue?: { string?: StringNum; text: string } | null;
   guideKey?: string;
   onPress?: (string: StringNum, fret: Fret) => void;
 }
@@ -99,20 +100,20 @@ export function Fretboard({
   const { height, width, open, nut, wireX, fretX, hitWidth, boardX, boardW } = layout;
   const boardTop = 12;
   const boardBottom = height - 16;
-  const cueIndex = cue ? strings.indexOf(cue.string) : -1;
-  const cueW = cue && cueIndex >= 0 ? Math.max(52, 20 + [...cue.text].length * 12) : 0;
-  const cuePad = cueW ? 20 : 0;
+  const cueIndex = cue?.string != null ? strings.indexOf(cue.string) : -1;
+  const cueOnString = cueIndex >= 0;
+  const cueW = cue ? Math.max(52, 20 + [...cue.text].length * 12) : 0;
+  const cuePad = cueW ? (cueOnString ? 20 : 28) : 0;
   const cueSidePad = cueW ? Math.max(0, Math.ceil(cueW * 0.6) - 8) : 0;
   const viewX = lefty ? 0 : -cueSidePad;
   const viewW = width + cueSidePad;
-  const cueLayout =
-    cue && cueIndex >= 0
-      ? {
-          x: lefty ? width - 16 : 16,
-          y: TOP + cueIndex * GAP - 26,
-          w: cueW,
-        }
-      : null;
+  const cueLayout = cue
+    ? {
+        x: lefty ? width - 16 : 16,
+        y: cueOnString ? TOP + cueIndex * GAP - 26 : -8,
+        w: cueW,
+      }
+    : null;
 
   return (
     <svg
@@ -252,7 +253,8 @@ export function Fretboard({
         if (mark.tone === "wrong") {
           return (
             <g
-              key={`mark-${mark.tone}-${mark.string}-${mark.fret}`}
+              key={`mark-${mark.tone}-${mark.string}-${mark.fret}-${mark.id ?? ""}`}
+              className="fretboard-wrong-mark"
               pointerEvents="none"
               opacity={opacity}
             >
@@ -279,7 +281,7 @@ export function Fretboard({
 
       {cue && cueLayout ? (
         <g
-          key={`cue-${cue.string}-${guideKey ?? cue.text}`}
+          key={`cue-${cue.string ?? "board"}-${guideKey ?? cue.text}`}
           transform={`translate(${cueLayout.x} ${cueLayout.y})`}
           pointerEvents="none"
         >

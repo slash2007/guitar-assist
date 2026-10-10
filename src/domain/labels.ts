@@ -57,6 +57,12 @@ export function noteLabel(pitch: PitchClass | ChromaticPitch): string {
   return LETTER[pitch];
 }
 
+export function huntPrompt(n: number, pitch: PitchClass, locale: Locale = "zh"): string {
+  const note = noteLabel(pitch);
+  if (locale === "en") return n === 1 ? `Find 1 ${note}` : `Find ${n} ${note}'s`;
+  return t(locale, "cue.locateHunt", { n, note });
+}
+
 export function stringFullLabel(string: StringNum, locale: Locale = "zh"): string {
   return t(locale, "string.full", { n: string, open: t(locale, OPEN_KEY[string]) });
 }

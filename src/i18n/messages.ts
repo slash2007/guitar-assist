@@ -92,14 +92,17 @@ export const zh = {
   "session.later": "暂停",
   "session.goalIdentify": "{string} · 看位置",
   "session.goalLocate": "{string} · 找 {note}",
+  "session.goalHunt": "找 {n} 个 {note}",
   "session.identifyPrompt": "这是什么音？",
   "session.locateOne": "{string}，找一个 {note}",
   "session.locateAll": "{string}，找齐 {note}",
+  "session.locateHunt": "找 {n} 个 {note}",
   "session.playFirst": "先弹出来，再答题",
   "session.notesAria": "音名",
-  "session.locateNeed": "已选 {a}/{b}。选齐即提交，再点可取消。",
-  "session.locateSubmit": "提交",
+  "session.locateNeed": "{a} / {b}",
   "session.locateTap": "点品格就会提交。",
+  "session.locateHuntHint": "点满正确音即过。点错会提示，不用取消。",
+  "session.locateMiss": "不是这个",
   "session.verdictOk": "对",
   "session.verdictPartial": "部分正确",
   "session.verdictMiss": "错",
@@ -110,6 +113,7 @@ export const zh = {
 
   "cue.locateOne": "找 {note}",
   "cue.locateAll": "找齐 {note}",
+  "cue.locateHunt": "找 {n} 个 {note}",
 
   "fret.open": "空",
   "fretboard.aria": "吉他指板",
@@ -163,6 +167,7 @@ export const zh = {
   "speech.identify": "{string}，{fret}",
   "speech.locateOne": "{string}，找一个 {note}",
   "speech.locateAll": "{string}，找齐 {note}",
+  "speech.locateHunt": "找 {n} 个 {note}",
 } as const;
 
 export type MessageKey = keyof typeof zh;
@@ -261,14 +266,17 @@ export const en: { [K in MessageKey]: string } = {
   "session.later": "Pause",
   "session.goalIdentify": "{string} · name it",
   "session.goalLocate": "{string} · find {note}",
+  "session.goalHunt": "Find {n} {note}",
   "session.identifyPrompt": "What note is this?",
   "session.locateOne": "{string}: find one {note}",
   "session.locateAll": "{string}: find every {note}",
+  "session.locateHunt": "Find {n} {note}",
   "session.playFirst": "Play it first, then answer",
   "session.notesAria": "Note names",
-  "session.locateNeed": "{a}/{b} selected. Submits when you have them all; tap again to undo.",
-  "session.locateSubmit": "Submit",
+  "session.locateNeed": "{a} / {b}",
   "session.locateTap": "Tap the fret to submit.",
+  "session.locateHuntHint": "Enough correct notes pass. A miss flashes and is ignored.",
+  "session.locateMiss": "Not this one",
   "session.verdictOk": "Correct",
   "session.verdictPartial": "Partly right",
   "session.verdictMiss": "Wrong",
@@ -279,6 +287,7 @@ export const en: { [K in MessageKey]: string } = {
 
   "cue.locateOne": "Find {note}",
   "cue.locateAll": "Every {note}",
+  "cue.locateHunt": "Find {n} {note}",
 
   "fret.open": "open",
   "fretboard.aria": "Guitar fretboard",
@@ -332,4 +341,5 @@ export const en: { [K in MessageKey]: string } = {
   "speech.identify": "{string}, {fret}",
   "speech.locateOne": "{string}, find one {note}",
   "speech.locateAll": "{string}, find every {note}",
+  "speech.locateHunt": "Find {n} {note}",
 };

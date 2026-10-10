@@ -77,13 +77,20 @@ export interface IdentifyQuestion {
   options: ChromaticPitch[];
 }
 
+export interface BoardSpot {
+  string: StringNum;
+  fret: Fret;
+}
+
 export interface LocateQuestion {
   kind: "locate";
   cardId: LocateId;
   string: StringNum;
   pitch: PitchClass;
-  answers: Fret[];
-  findOne: boolean;
+  need: number;
+  pool: BoardSpot[];
+  targets: LocateId[];
+  strings: StringNum[];
 }
 
 export type Question = IdentifyQuestion | LocateQuestion;
@@ -98,6 +105,7 @@ export interface ActiveSession {
   questions: Question[];
   index: number;
   answered: number;
+  correctCount?: number;
   dueCount: number;
   newIntroduced: number;
   paused?: boolean;

@@ -94,6 +94,9 @@ describe("buildReviewQueue", () => {
     });
     expect(queue.questions.some((item) => item.cardId === oldDue)).toBe(true);
     expect(new Set(queue.questions.map((item) => item.string))).toEqual(new Set([6, 5]));
+    const hunts = queue.questions.filter((item) => item.kind === "locate");
+    expect(hunts.length).toBeGreaterThan(0);
+    expect(hunts.every((item) => item.strings.length === 2 && item.need >= 1 && item.need <= 3)).toBe(true);
   });
 
   it("skips cards already seen in this sitting", () => {

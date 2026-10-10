@@ -1,4 +1,5 @@
 import { useRef, useState } from "react";
+import { primeOutput } from "../../audio/unlock";
 import { LanguageToggle } from "../LanguageToggle";
 import { useStore } from "../store";
 import { useT } from "../useT";
@@ -43,7 +44,10 @@ export function SettingsPage() {
         <input
           type="checkbox"
           checked={profile.speechEnabled}
-          onChange={(e) => void updateProfile({ speechEnabled: e.target.checked })}
+          onChange={(e) => {
+            if (e.target.checked) primeOutput();
+            void updateProfile({ speechEnabled: e.target.checked });
+          }}
         />
       </label>
       <label className="setting">
@@ -54,7 +58,10 @@ export function SettingsPage() {
         <input
           type="checkbox"
           checked={profile.answerSound}
-          onChange={(e) => void updateProfile({ answerSound: e.target.checked })}
+          onChange={(e) => {
+            if (e.target.checked) primeOutput();
+            void updateProfile({ answerSound: e.target.checked });
+          }}
         />
       </label>
       <label className="setting">
