@@ -44,6 +44,16 @@ export function fretsForPitch(string: StringNum, pitch: PitchClass): Fret[] {
   return FRETS.filter((fret) => pitchClassAt(string, fret) === pitch);
 }
 
+export function positionsForChromatic(pitch: ChromaticPitch): Array<{ string: StringNum; fret: Fret }> {
+  const found: Array<{ string: StringNum; fret: Fret }> = [];
+  for (const string of STRING_NUMS) {
+    for (const fret of FRETS) {
+      if (chromaticNameAt(string, fret) === pitch) found.push({ string, fret });
+    }
+  }
+  return found;
+}
+
 export function naturalPositionsOn(string: StringNum): Array<{ fret: Fret; pitch: PitchClass }> {
   const found: Array<{ fret: Fret; pitch: PitchClass }> = [];
   for (const fret of FRETS) {

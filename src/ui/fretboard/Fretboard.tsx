@@ -67,6 +67,27 @@ function boardLayout(lefty: boolean, stringCount: number) {
   return { height, width, open, nut, nutInner, wireX, fretX, hitWidth, boardX, boardW };
 }
 
+function isWoundString(string: StringNum): boolean {
+  return string >= 4;
+}
+
+function stringStroke(string: StringNum): number {
+  return 1.15 + string * 0.38;
+}
+
+function woundWrapPath(x1: number, x2: number, y: number, string: StringNum): string {
+  const left = Math.min(x1, x2);
+  const right = Math.max(x1, x2);
+  const amp = 1.15 + (string - 4) * 0.28;
+  const step = 2.9 + (string - 4) * 0.35;
+  const lean = 1.7 + (string - 4) * 0.2;
+  const parts: string[] = [];
+  for (let x = left; x <= right; x += step) {
+    parts.push(`M ${x.toFixed(1)} ${(y - amp).toFixed(1)} L ${(x + lean).toFixed(1)} ${(y + amp).toFixed(1)}`);
+  }
+  return parts.join(" ");
+}
+
 function stringOpacity(
   string: StringNum,
   activeStrings: StringNum[] | "all",
@@ -154,45 +175,23 @@ export function Fretboard({
       {strings.map((string, index) => {
         const y = TOP + index * GAP;
         const opacity = stringOpacity(string, activeStrings, unlockedStrings);
-        const canClick = clickable === true || (Array.isArray(clickable) && clickable.includes(string));
         return (
-          <g key={`cells-${string}`} opacity={opacity}>
+          <g key={`cells-${string}`} opacity={opacity} pointerEvents="none">
             {FRETS.map((fret) => {
               const x = fretX(fret);
-              const natural = pitchClassAt(string, fret);
               const mark = marks.find((item) => item.string === string && item.fret === fret);
               const cellHeat = heat?.find((item) => item.string === string && item.fret === fret)?.heat;
               const notableHeat =
                 cellHeat === "fast" || cellHeat === "ok" || cellHeat === "slow" || cellHeat === "fail";
-              const showDot = Boolean((!mark && notableHeat) || (showNames && natural && !mark));
-              const w = hitWidth(fret);
+              if (mark || !notableHeat) return null;
               return (
-                <g key={`${string}-${fret}`}>
-                  {canClick ? (
-                    <rect
-                      className="fretboard-hit"
-                      x={x - w / 2}
-                      y={y - 16}
-                      width={w}
-                      height={32}
-                      rx="10"
-                      onClick={() => onPress?.(string, fret)}
-                    />
-                  ) : null}
-                  {showDot ? (
-                    <circle
-                      className={[
-                        "fretboard-dot",
-                        mark ? `is-${mark.tone}` : "",
-                        cellHeat ? `heat-${cellHeat}` : "",
-                        showNames && natural ? "is-named" : "",
-                      ].join(" ")}
-                      cx={x}
-                      cy={y}
-                      r="11"
-                    />
-                  ) : null}
-                </g>
+                <circle
+                  key={`${string}-${fret}`}
+                  className={`fretboard-dot heat-${cellHeat}`}
+                  cx={x}
+                  cy={y}
+                  r="11"
+                />
               );
             })}
           </g>
@@ -203,18 +202,27 @@ export function Fretboard({
         const y = TOP + index * GAP;
         const opacity = stringOpacity(string, activeStrings, unlockedStrings);
         const end = lefty ? 10 : width - 10;
+        const x1 = lefty ? end : open - 18;
+        const x2 = lefty ? open + 18 : end;
+        const wound = isWoundString(string);
         return (
-          <line
-            key={`string-${string}`}
-            className={`fretboard-string ${opacity >= 0.9 ? "is-active" : "is-dim"}`}
-            opacity={opacity}
-            x1={lefty ? end : open - 18}
-            x2={lefty ? open + 18 : end}
-            y1={y}
-            y2={y}
-            strokeWidth={1.15 + string * 0.38}
-            pointerEvents="none"
-          />
+          <g key={`string-${string}`} opacity={opacity} pointerEvents="none">
+            <line
+              className={`fretboard-string${opacity >= 0.9 ? " is-active" : " is-dim"}`}
+              x1={x1}
+              x2={x2}
+              y1={y}
+              y2={y}
+              strokeWidth={stringStroke(string)}
+            />
+            {wound ? (
+              <path
+                className="fretboard-string-wrap"
+                d={woundWrapPath(x1, x2, y, string)}
+                strokeWidth={1.15 + (string - 4) * 0.15}
+              />
+            ) : null}
+          </g>
         );
       })}
 
@@ -310,17 +318,19 @@ export function Fretboard({
               const mark = marks.find((item) => item.string === string && item.fret === fret);
               const revealMark =
                 mark && (mark.tone === "correct" || mark.tone === "missed" || mark.tone === "peek");
-              const label =
-                showNames && natural
-                  ? noteLabel(natural)
-                  : revealMark
-                    ? noteLabel(pitch)
-                    : "";
-              return label ? (
-                <text key={`${string}-${fret}`} className="fretboard-note" x={x} y={y + 4}>
+              const named = showNames && Boolean(natural) && !mark;
+              const label = named ? noteLabel(natural!) : revealMark ? noteLabel(pitch) : "";
+              if (!label) return null;
+              return (
+                <text
+                  key={`${string}-${fret}`}
+                  className={`fretboard-note${named ? " is-atlas" : ""}`}
+                  x={x}
+                  y={y + 4}
+                >
                   {label}
                 </text>
-              ) : null;
+              );
             })}
           </g>
         );
@@ -336,6 +346,32 @@ export function Fretboard({
             </text>
           ))
         : null}
+
+      {strings.map((string, index) => {
+        const y = TOP + index * GAP;
+        const canClick = clickable === true || (Array.isArray(clickable) && clickable.includes(string));
+        if (!canClick) return null;
+        return (
+          <g key={`hits-${string}`}>
+            {FRETS.map((fret) => {
+              const x = fretX(fret);
+              const w = hitWidth(fret);
+              return (
+                <rect
+                  key={`${string}-${fret}`}
+                  className="fretboard-hit"
+                  x={x - w / 2}
+                  y={y - 16}
+                  width={w}
+                  height={32}
+                  rx="10"
+                  onClick={() => onPress?.(string, fret)}
+                />
+              );
+            })}
+          </g>
+        );
+      })}
     </svg>
   );
 }

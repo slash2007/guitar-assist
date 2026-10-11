@@ -1,4 +1,4 @@
-import { useRef, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { primeOutput } from "../../audio/unlock";
 import { LanguageToggle } from "../LanguageToggle";
 import { useStore } from "../store";
@@ -9,6 +9,16 @@ export function SettingsPage() {
   const { t } = useT();
   const fileRef = useRef<HTMLInputElement>(null);
   const [message, setMessage] = useState<string | null>(null);
+  const [confirmReset, setConfirmReset] = useState(false);
+
+  useEffect(() => {
+    if (!confirmReset) return;
+    const onKey = (event: KeyboardEvent) => {
+      if (event.key === "Escape") setConfirmReset(false);
+    };
+    window.addEventListener("keydown", onKey);
+    return () => window.removeEventListener("keydown", onKey);
+  }, [confirmReset]);
 
   return (
     <section className="page">
@@ -95,15 +105,7 @@ export function SettingsPage() {
         <button type="button" className="ghost-btn" onClick={() => fileRef.current?.click()}>
           {t("settings.import")}
         </button>
-        <button
-          type="button"
-          className="danger-btn"
-          onClick={() => {
-            if (window.confirm(t("settings.resetConfirm"))) {
-              void resetProgress().then(() => setMessage(t("settings.resetDone")));
-            }
-          }}
-        >
+        <button type="button" className="danger-btn" onClick={() => setConfirmReset(true)}>
           {t("settings.reset")}
         </button>
       </div>
@@ -128,6 +130,37 @@ export function SettingsPage() {
         }}
       />
       {message ? <p className="hint">{message}</p> : null}
+
+      {confirmReset ? (
+        <div className="reset-overlay" onClick={() => setConfirmReset(false)}>
+          <div
+            className="reset-sheet"
+            role="dialog"
+            aria-modal="true"
+            aria-labelledby="reset-title"
+            onClick={(event) => event.stopPropagation()}
+          >
+            <p className="eyebrow">{t("settings.title")}</p>
+            <h2 id="reset-title">{t("settings.resetTitle")}</h2>
+            <p className="lede">{t("settings.resetConfirm")}</p>
+            <div className="btn-row">
+              <button type="button" className="ghost-btn" onClick={() => setConfirmReset(false)}>
+                {t("settings.resetCancel")}
+              </button>
+              <button
+                type="button"
+                className="danger-btn"
+                onClick={() => {
+                  setConfirmReset(false);
+                  void resetProgress().then(() => setMessage(t("settings.resetDone")));
+                }}
+              >
+                {t("settings.resetAction")}
+              </button>
+            </div>
+          </div>
+        </div>
+      ) : null}
     </section>
   );
 }

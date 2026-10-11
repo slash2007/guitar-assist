@@ -1,10 +1,9 @@
 import { useState } from "react";
 import { playPitch } from "../../audio/play";
 import { noteLabel, stringFullLabel } from "../../domain/labels";
-import { unlockedStrings } from "../../domain/stages";
-import { chromaticNameAt } from "../../domain/tuning";
+import { chromaticNameAt, positionsForChromatic } from "../../domain/tuning";
 import type { Fret, StringNum } from "../../domain/types";
-import { Fretboard } from "../fretboard/Fretboard";
+import { Fretboard, type Mark } from "../fretboard/Fretboard";
 import { PageHeader } from "../PageHeader";
 import { useStore } from "../store";
 import { useT } from "../useT";
@@ -12,13 +11,17 @@ import { useT } from "../useT";
 export function ExplorePage() {
   const { profile } = useStore();
   const { t, locale } = useT();
-  const unlocked = unlockedStrings(profile.stage);
   const [showNames, setShowNames] = useState(false);
-  const [onlyUnlocked, setOnlyUnlocked] = useState(false);
+  const [sameNotes, setSameNotes] = useState(false);
   const [picked, setPicked] = useState<{ string: StringNum; fret: Fret } | null>(null);
-  const [lockedHint, setLockedHint] = useState(false);
 
-  const visible = onlyUnlocked && unlocked.length > 0 ? unlocked : "all";
+  const marks: Mark[] = [];
+  if (picked) {
+    const pitch = chromaticNameAt(picked.string, picked.fret);
+    const spots = sameNotes ? positionsForChromatic(pitch) : [picked];
+    for (const spot of spots) marks.push({ ...spot, tone: "peek" });
+    if (sameNotes) marks.push({ ...picked, tone: "target" });
+  }
 
   return (
     <section className="page">
@@ -30,13 +33,8 @@ export function ExplorePage() {
           {t("explore.showNames")}
         </label>
         <label>
-          <input
-            type="checkbox"
-            checked={onlyUnlocked}
-            onChange={(e) => setOnlyUnlocked(e.target.checked)}
-            disabled={unlocked.length === 0}
-          />
-          {t("explore.unlockedOnly")}
+          <input type="checkbox" checked={sameNotes} onChange={(e) => setSameNotes(e.target.checked)} />
+          {t("explore.sameNotes")}
         </label>
       </div>
       <Fretboard
@@ -44,19 +42,13 @@ export function ExplorePage() {
         showNames={showNames}
         showFretNumbers={profile.showFretNumbers}
         locale={locale}
-        visibleStrings={visible}
-        unlockedStrings={unlocked}
-        activeStrings={unlocked}
-        marks={picked ? [{ string: picked.string, fret: picked.fret, tone: "peek" }] : []}
+        marks={marks}
         clickable
         onPress={(string, fret) => {
-          const locked = unlocked.length > 0 && !unlocked.includes(string);
-          setLockedHint(locked);
           setPicked({ string, fret });
           void playPitch(string, fret);
         }}
       />
-      {lockedHint ? <p className="hint">{t("explore.locked")}</p> : null}
       {picked ? (
         <p className="lede">
           {t("explore.picked", {

@@ -19,12 +19,12 @@ export function defaultProfile(now = new Date()): Profile {
     createdAt: now.toISOString(),
     stage: 1,
     dailyMinutes: 6,
-    guitarInHand: true,
-    speechEnabled: true,
-    answerSound: true,
+    guitarInHand: false,
+    speechEnabled: false,
+    answerSound: false,
     locale: detectLocale(),
     lefty: false,
-    showFretNumbers: true,
+    showFretNumbers: false,
   };
 }
 
@@ -51,12 +51,12 @@ export function normalizeProfile(raw: Partial<Profile> | null | undefined, now =
     createdAt: raw.createdAt || base.createdAt,
     stage: Number.isFinite(stageRaw) ? Math.min(10, Math.max(1, Math.floor(stageRaw))) : 1,
     dailyMinutes: MINUTES.includes(minutes) ? minutes : 6,
-    guitarInHand: raw.guitarInHand !== false,
-    speechEnabled: raw.speechEnabled !== false,
-    answerSound: raw.answerSound !== false,
+    guitarInHand: Boolean(raw.guitarInHand),
+    speechEnabled: Boolean(raw.speechEnabled),
+    answerSound: Boolean(raw.answerSound),
     locale: raw.locale === "en" ? "en" : "zh",
     lefty: Boolean(raw.lefty),
-    showFretNumbers: raw.showFretNumbers !== false,
+    showFretNumbers: Boolean(raw.showFretNumbers),
     lastSessionDate: raw.lastSessionDate,
     lastCompletedDate: raw.lastCompletedDate,
   };

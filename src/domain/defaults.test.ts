@@ -8,19 +8,19 @@ describe("normalizeProfile", () => {
     expect(normalizeProfile({ stage: 0 } as never).stage).toBe(1);
   });
 
-  it("keeps spoken prompts on unless explicitly off", () => {
-    expect(normalizeProfile({}).speechEnabled).toBe(true);
-    expect(normalizeProfile({ speechEnabled: false }).speechEnabled).toBe(false);
+  it("defaults all setting toggles off", () => {
+    const next = normalizeProfile({});
+    expect(next.guitarInHand).toBe(false);
+    expect(next.speechEnabled).toBe(false);
+    expect(next.answerSound).toBe(false);
+    expect(next.lefty).toBe(false);
+    expect(next.showFretNumbers).toBe(false);
   });
 
-  it("keeps answer tones on unless explicitly off", () => {
-    expect(normalizeProfile({}).answerSound).toBe(true);
-    expect(normalizeProfile({ answerSound: false }).answerSound).toBe(false);
-  });
-
-  it("shows fret numbers unless explicitly hidden", () => {
-    expect(normalizeProfile({}).showFretNumbers).toBe(true);
-    expect(normalizeProfile({ showFretNumbers: false }).showFretNumbers).toBe(false);
+  it("keeps a toggle on only when it was saved on", () => {
+    expect(normalizeProfile({ speechEnabled: true }).speechEnabled).toBe(true);
+    expect(normalizeProfile({ answerSound: true }).answerSound).toBe(true);
+    expect(normalizeProfile({ showFretNumbers: true }).showFretNumbers).toBe(true);
   });
 });
 

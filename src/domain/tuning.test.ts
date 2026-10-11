@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 import { allSkillCards, identifyCardsOn, locateCardsOn, naturalCount } from "./cards";
-import { fretsForPitch, pitchClassAt } from "./tuning";
+import { chromaticNameAt, fretsForPitch, pitchClassAt, positionsForChromatic } from "./tuning";
 
 describe("tuning", () => {
   it("maps open strings to standard pitch classes", () => {
@@ -21,6 +21,15 @@ describe("tuning", () => {
   it("finds both octaves of E on the low E string", () => {
     expect(fretsForPitch(6, "E")).toEqual([0, 12]);
     expect(fretsForPitch(6, "G")).toEqual([3]);
+  });
+
+  it("lists every fretboard spot for a chromatic pitch", () => {
+    const a = positionsForChromatic("A");
+    expect(a).toContainEqual({ string: 5, fret: 0 });
+    expect(a).toContainEqual({ string: 6, fret: 5 });
+    expect(a).toContainEqual({ string: 4, fret: 7 });
+    expect(a.every((spot) => chromaticNameAt(spot.string, spot.fret) === "A")).toBe(true);
+    expect(new Set(a.map((spot) => `${spot.string}:${spot.fret}`)).size).toBe(a.length);
   });
 
   it("counts first-phase natural skill units", () => {

@@ -464,6 +464,50 @@ h2 {
   color: #f0c0c0;
 }
 
+.reset-overlay {
+  position: fixed;
+  inset: 0;
+  z-index: 30;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 24px 16px;
+  background: rgba(8, 8, 10, 0.72);
+  backdrop-filter: blur(10px);
+}
+
+.reset-sheet {
+  width: min(100%, 400px);
+  padding: 22px 20px 18px;
+  border-radius: 18px;
+  background: var(--bg-elev);
+  border: 1px solid var(--line);
+  box-shadow: var(--shadow);
+}
+
+.reset-sheet .eyebrow {
+  margin: 0;
+}
+
+.reset-sheet h2 {
+  margin: 8px 0 10px;
+  font-size: 1.35rem;
+}
+
+.reset-sheet .lede {
+  margin: 0 0 20px;
+}
+
+.reset-sheet .btn-row {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 10px;
+}
+
+.reset-sheet .btn-row button {
+  width: 100%;
+}
+
 .text-btn {
   background: none;
   border: 0;
@@ -724,6 +768,15 @@ h2 {
 
 .fretboard-string {
   stroke: var(--fret);
+  stroke-linecap: round;
+}
+
+.fretboard-string-wrap {
+  fill: none;
+  stroke: var(--fret);
+  stroke-linejoin: miter;
+  stroke-linecap: butt;
+  opacity: 0.58;
 }
 
 .fretboard-string-label,
@@ -747,7 +800,6 @@ h2 {
   stroke-width: 2;
 }
 
-.fretboard-dot.is-named,
 .fretboard-dot.is-peek {
   fill: #2a241c;
   stroke: var(--accent);
@@ -956,13 +1008,34 @@ h2 {
   }
 }
 
+.progress-panel {
+  margin-top: 6px;
+  padding: 16px 14px 12px;
+  border-radius: 16px;
+  background: var(--bg-elev);
+  border: 1px solid var(--line);
+}
+
+.progress-panel h2 {
+  margin: 0 0 6px;
+}
+
+.progress-panel .lede {
+  margin: 0 0 12px;
+}
+
+.progress-panel .fretboard {
+  display: block;
+  width: 100%;
+}
+
 .heat-legend {
   display: flex;
   flex-wrap: wrap;
   gap: 8px 14px;
   list-style: none;
   padding: 0;
-  margin: 0;
+  margin: 0 0 12px;
   color: var(--muted);
   font-size: 0.82rem;
 }
@@ -1039,6 +1112,15 @@ h2 {
 .fretboard-note {
   fill: var(--text);
   pointer-events: none;
+}
+
+.fretboard-note.is-atlas {
+  fill: #c8c6bf;
+  font-size: 12px;
+  stroke: var(--wood);
+  stroke-width: 5px;
+  stroke-linejoin: round;
+  paint-order: stroke fill;
 }
 
 @media (max-width: 640px) {

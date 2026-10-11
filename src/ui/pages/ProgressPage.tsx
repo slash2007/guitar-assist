@@ -37,40 +37,44 @@ export function ProgressPage() {
           ))}
         </ul>
       </PathList>
-      <ul className="heat-legend" aria-label={t("progress.legendAria")}>
-        <li>
-          <i className="heat-swatch is-fast" aria-hidden />
-          {t("progress.legendFast")}
-        </li>
-        <li>
-          <i className="heat-swatch is-ok" aria-hidden />
-          {t("progress.legendOk")}
-        </li>
-        <li>
-          <i className="heat-swatch is-slow" aria-hidden />
-          {t("progress.legendSlow")}
-        </li>
-        <li>
-          <i className="heat-swatch is-fail" aria-hidden />
-          {t("progress.legendFail")}
-        </li>
-        <li>
-          <i className="heat-swatch is-empty" aria-hidden />
-          {t("progress.legendEmpty")}
-        </li>
-        <li>
-          <i className="heat-swatch is-locked" aria-hidden />
-          {t("progress.legendLocked")}
-        </li>
-      </ul>
-      <Fretboard
-        lefty={profile.lefty}
-        locale={locale}
-        showFretNumbers={profile.showFretNumbers}
-        heat={heat}
-        unlockedStrings={unlocked}
-        activeStrings={focus}
-      />
+      <section className="progress-panel" aria-labelledby="heat-title">
+        <h2 id="heat-title">{t("progress.heatTitle")}</h2>
+        <p className="lede">{t("progress.heatLede")}</p>
+        <ul className="heat-legend" aria-label={t("progress.legendAria")}>
+          <li>
+            <i className="heat-swatch is-fast" aria-hidden />
+            {t("progress.legendFast")}
+          </li>
+          <li>
+            <i className="heat-swatch is-ok" aria-hidden />
+            {t("progress.legendOk")}
+          </li>
+          <li>
+            <i className="heat-swatch is-slow" aria-hidden />
+            {t("progress.legendSlow")}
+          </li>
+          <li>
+            <i className="heat-swatch is-fail" aria-hidden />
+            {t("progress.legendFail")}
+          </li>
+          <li>
+            <i className="heat-swatch is-empty" aria-hidden />
+            {t("progress.legendEmpty")}
+          </li>
+          <li>
+            <i className="heat-swatch is-locked" aria-hidden />
+            {t("progress.legendLocked")}
+          </li>
+        </ul>
+        <Fretboard
+          lefty={profile.lefty}
+          locale={locale}
+          showFretNumbers={profile.showFretNumbers}
+          heat={heat}
+          unlockedStrings={unlocked}
+          activeStrings={focus}
+        />
+      </section>
       <h2>{t("progress.week")}</h2>
       <ol className="week">
         {days.map((day) => {
