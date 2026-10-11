@@ -508,6 +508,25 @@ h2 {
   width: 100%;
 }
 
+.intro-sheet {
+  width: min(100%, 440px);
+}
+
+.intro-sheet .lede {
+  margin-bottom: 14px;
+}
+
+.intro-points {
+  margin: 0 0 20px;
+  padding-left: 1.15rem;
+  color: var(--muted);
+  line-height: 1.65;
+}
+
+.intro-points li + li {
+  margin-top: 8px;
+}
+
 .text-btn {
   background: none;
   border: 0;

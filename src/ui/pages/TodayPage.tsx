@@ -1,3 +1,4 @@
+import { useEffect, useState } from "react";
 import { evaluateGate, primaryBlocker } from "../../domain/gate";
 import { stageFocus, stageLabel } from "../../domain/labels";
 import { stageDef, unlockedStrings } from "../../domain/stages";
@@ -11,8 +12,9 @@ import { useStore } from "../store";
 import { useT } from "../useT";
 
 export function TodayPage() {
-  const { profile, session, attempts, summaries, startPractice, resumeSession } = useStore();
+  const { profile, session, attempts, summaries, startPractice, resumeSession, updateProfile } = useStore();
   const { t, locale } = useT();
+  const [hideIntro, setHideIntro] = useState(false);
   const latest = summaries[0];
   const gate = evaluateGate(profile.stage, attempts, profile.guitarInHand);
   const blocker = primaryBlocker(profile.stage, gate);
@@ -21,6 +23,21 @@ export function TodayPage() {
   const unlocked = unlockedStrings(profile.stage);
   const currentName = stageLabel(profile.stage, locale);
   const ms = (value: number | null) => formatMs(value, locale);
+  const showIntro = !profile.introSeen && !profile.lastSessionDate && attempts.length === 0 && !paused && !hideIntro;
+
+  useEffect(() => {
+    if (!showIntro) return;
+    const onKey = (event: KeyboardEvent) => {
+      if (event.key === "Escape") void dismissIntro();
+    };
+    window.addEventListener("keydown", onKey);
+    return () => window.removeEventListener("keydown", onKey);
+  }, [showIntro]);
+
+  async function dismissIntro() {
+    setHideIntro(true);
+    await updateProfile({ introSeen: true });
+  }
 
   return (
     <section className="page today">
@@ -62,6 +79,44 @@ export function TodayPage() {
             ms: ms(latest.medianMs),
           })}
         </p>
+      ) : null}
+
+      {showIntro ? (
+        <div className="reset-overlay" onClick={() => void dismissIntro()}>
+          <div
+            className="reset-sheet intro-sheet"
+            role="dialog"
+            aria-modal="true"
+            aria-labelledby="intro-title"
+            onClick={(event) => event.stopPropagation()}
+          >
+            <p className="eyebrow">{t("today.eyebrow")}</p>
+            <h2 id="intro-title">{t("intro.title")}</h2>
+            <p className="lede">{t("intro.lede")}</p>
+            <ul className="intro-points">
+              <li>{t("intro.identify")}</li>
+              <li>{t("intro.locate")}</li>
+              <li>{t("intro.srs")}</li>
+              <li>{t("intro.local")}</li>
+              <li>{t("intro.guitar")}</li>
+            </ul>
+            <div className="btn-row">
+              <button type="button" className="ghost-btn" onClick={() => void dismissIntro()}>
+                {t("intro.later")}
+              </button>
+              <button
+                type="button"
+                className="primary-btn"
+                onClick={() => {
+                  void dismissIntro();
+                  void startPractice();
+                }}
+              >
+                {t("intro.start")}
+              </button>
+            </div>
+          </div>
+        </div>
       ) : null}
     </section>
   );

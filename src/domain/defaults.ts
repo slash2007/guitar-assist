@@ -25,6 +25,7 @@ export function defaultProfile(now = new Date()): Profile {
     locale: detectLocale(),
     lefty: false,
     showFretNumbers: false,
+    introSeen: false,
   };
 }
 
@@ -57,6 +58,7 @@ export function normalizeProfile(raw: Partial<Profile> | null | undefined, now =
     locale: raw.locale === "en" ? "en" : "zh",
     lefty: Boolean(raw.lefty),
     showFretNumbers: Boolean(raw.showFretNumbers),
+    introSeen: Boolean(raw.introSeen),
     lastSessionDate: raw.lastSessionDate,
     lastCompletedDate: raw.lastCompletedDate,
   };

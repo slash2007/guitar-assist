@@ -15,6 +15,7 @@ describe("normalizeProfile", () => {
     expect(next.answerSound).toBe(false);
     expect(next.lefty).toBe(false);
     expect(next.showFretNumbers).toBe(false);
+    expect(next.introSeen).toBe(false);
   });
 
   it("keeps a toggle on only when it was saved on", () => {

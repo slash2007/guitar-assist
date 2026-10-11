@@ -40,6 +40,7 @@ export interface Profile {
   locale: Locale;
   lefty: boolean;
   showFretNumbers: boolean;
+  introSeen?: boolean;
   lastSessionDate?: string;
   lastCompletedDate?: string;
 }
