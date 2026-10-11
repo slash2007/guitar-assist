@@ -9,6 +9,7 @@ export default defineConfig({
       registerType: "autoUpdate",
       includeAssets: ["icon.svg"],
       workbox: {
+        globPatterns: ["**/*.{js,css,html,svg,woff2,webmanifest}"],
         globIgnores: ["**/audio/**"],
         runtimeCaching: [
           {
