@@ -57,14 +57,6 @@ export function ProgressPage() {
             <i className="heat-swatch is-fail" aria-hidden />
             {t("progress.legendFail")}
           </li>
-          <li>
-            <i className="heat-swatch is-empty" aria-hidden />
-            {t("progress.legendEmpty")}
-          </li>
-          <li>
-            <i className="heat-swatch is-locked" aria-hidden />
-            {t("progress.legendLocked")}
-          </li>
         </ul>
         <Fretboard
           lefty={profile.lefty}

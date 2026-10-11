@@ -175,32 +175,6 @@ export function Fretboard({
       {strings.map((string, index) => {
         const y = TOP + index * GAP;
         const opacity = stringOpacity(string, activeStrings, unlockedStrings);
-        return (
-          <g key={`cells-${string}`} opacity={opacity} pointerEvents="none">
-            {FRETS.map((fret) => {
-              const x = fretX(fret);
-              const mark = marks.find((item) => item.string === string && item.fret === fret);
-              const cellHeat = heat?.find((item) => item.string === string && item.fret === fret)?.heat;
-              const notableHeat =
-                cellHeat === "fast" || cellHeat === "ok" || cellHeat === "slow" || cellHeat === "fail";
-              if (mark || !notableHeat) return null;
-              return (
-                <circle
-                  key={`${string}-${fret}`}
-                  className={`fretboard-dot heat-${cellHeat}`}
-                  cx={x}
-                  cy={y}
-                  r="11"
-                />
-              );
-            })}
-          </g>
-        );
-      })}
-
-      {strings.map((string, index) => {
-        const y = TOP + index * GAP;
-        const opacity = stringOpacity(string, activeStrings, unlockedStrings);
         const end = lefty ? 10 : width - 10;
         const x1 = lefty ? end : open - 18;
         const x2 = lefty ? open + 18 : end;
@@ -222,6 +196,32 @@ export function Fretboard({
                 strokeWidth={1.15 + (string - 4) * 0.15}
               />
             ) : null}
+          </g>
+        );
+      })}
+
+      {strings.map((string, index) => {
+        const y = TOP + index * GAP;
+        const opacity = stringOpacity(string, activeStrings, unlockedStrings);
+        return (
+          <g key={`heat-${string}`} opacity={opacity} pointerEvents="none">
+            {FRETS.map((fret) => {
+              const x = fretX(fret);
+              const mark = marks.find((item) => item.string === string && item.fret === fret);
+              const cellHeat = heat?.find((item) => item.string === string && item.fret === fret)?.heat;
+              const notableHeat =
+                cellHeat === "fast" || cellHeat === "ok" || cellHeat === "slow" || cellHeat === "fail";
+              if (mark || !notableHeat) return null;
+              return (
+                <circle
+                  key={`${string}-${fret}`}
+                  className={`fretboard-dot heat-${cellHeat}`}
+                  cx={x}
+                  cy={y}
+                  r="11"
+                />
+              );
+            })}
           </g>
         );
       })}

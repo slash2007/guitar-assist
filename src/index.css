@@ -1074,21 +1074,6 @@ h2 {
   border-color: var(--heat-fail-stroke);
 }
 
-.heat-swatch.is-empty {
-  background: transparent;
-  border-color: var(--muted);
-  border-style: dashed;
-}
-
-.heat-swatch.is-locked {
-  background: repeating-linear-gradient(
-    -45deg,
-    #4a4b52 0 2px,
-    transparent 2px 4px
-  );
-  border-color: var(--muted);
-}
-
 .fretboard-dot.heat-fast {
   fill: var(--heat-fast-fill);
   stroke: var(--heat-fast-stroke);

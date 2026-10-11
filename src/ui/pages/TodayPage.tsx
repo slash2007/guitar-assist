@@ -1,7 +1,6 @@
 import { evaluateGate, primaryBlocker } from "../../domain/gate";
 import { stageFocus, stageLabel } from "../../domain/labels";
 import { stageDef, unlockedStrings } from "../../domain/stages";
-import { localDateKey } from "../../domain/stats";
 import { remainingLabel } from "../../srs/session";
 import { formatMs, formatPct } from "../format";
 import { Fretboard } from "../fretboard/Fretboard";
@@ -12,12 +11,11 @@ import { useStore } from "../store";
 import { useT } from "../useT";
 
 export function TodayPage() {
-  const { profile, session, daily, attempts, summaries, startPractice, resumeSession } = useStore();
+  const { profile, session, attempts, summaries, startPractice, resumeSession } = useStore();
   const { t, locale } = useT();
   const latest = summaries[0];
   const gate = evaluateGate(profile.stage, attempts, profile.guitarInHand);
   const blocker = primaryBlocker(profile.stage, gate);
-  const practicedToday = daily.completed && daily.date === localDateKey();
   const paused = Boolean(session?.paused);
   const focus = stageDef(profile.stage)?.strings ?? [6];
   const unlocked = unlockedStrings(profile.stage);
@@ -65,7 +63,6 @@ export function TodayPage() {
           })}
         </p>
       ) : null}
-      {practicedToday && !paused ? <p className="hint">{t("today.canContinue")}</p> : null}
     </section>
   );
 }
