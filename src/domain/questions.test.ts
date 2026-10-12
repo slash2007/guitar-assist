@@ -1,4 +1,5 @@
 import { describe, expect, it } from "vitest";
+import { rateLocate } from "./rating";
 import {
   applyLocateTap,
   buildIdentifyQuestion,
@@ -54,13 +55,23 @@ describe("questions", () => {
     expect(updates.every((item) => !item.correct)).toBe(true);
   });
 
-  it("ignores a miss on multi-note locate and keeps the current hits", () => {
+  it("ends a multi-note locate on the first miss", () => {
     const q = buildMixLocateQuestion("loc:6:A", 3, new Map(), () => true, () => 0);
     const hit = { string: 6 as const, fret: 5 as const };
-    const kept = applyLocateTap(q, [hit], { string: 6, fret: 1 });
-    expect(kept).toEqual({ selected: [hit], ignored: true, done: false });
+    const miss = applyLocateTap(q, [hit], { string: 6, fret: 1 });
+    expect(miss).toEqual({
+      selected: [hit, { string: 6, fret: 1 }],
+      done: true,
+    });
+    expect(
+      rateLocate({
+        selected: miss.selected,
+        pool: q.pool,
+        need: q.need,
+        elapsedMs: 900,
+      }),
+    ).toEqual({ rating: 1, correct: false, partial: false });
     const next = applyLocateTap(q, [hit], { string: 5, fret: 0 });
-    expect(next.ignored).toBe(false);
     expect(next.done).toBe(true);
     expect(next.selected).toEqual([hit, { string: 5, fret: 0 }]);
   });
@@ -69,7 +80,6 @@ describe("questions", () => {
     const q = buildLocateQuestion(6, "E", 1);
     expect(applyLocateTap(q, [], { string: 6, fret: 3 })).toEqual({
       selected: [{ string: 6, fret: 3 }],
-      ignored: false,
       done: true,
     });
   });

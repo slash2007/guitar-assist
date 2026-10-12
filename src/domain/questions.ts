@@ -131,19 +131,18 @@ export function applyLocateTap(
   question: LocateQuestion,
   selected: readonly BoardSpot[],
   tap: BoardSpot,
-): { selected: BoardSpot[]; ignored: boolean; done: boolean } {
+): { selected: BoardSpot[]; done: boolean } {
   if (question.need <= 1) {
-    return { selected: [tap], ignored: false, done: true };
+    return { selected: [tap], done: true };
   }
   if (!inPool(tap, question.pool)) {
-    return { selected: [...selected], ignored: true, done: false };
+    return { selected: [...selected, tap], done: true };
   }
   const next = selected.some((item) => sameSpot(item, tap))
     ? selected.filter((item) => !sameSpot(item, tap))
     : [...selected, tap];
   return {
     selected: next,
-    ignored: false,
     done: locateHits(question, next).length >= question.need,
   };
 }

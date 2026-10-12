@@ -5,7 +5,7 @@ export type { MessageKey };
 export type Vars = Record<string, string | number>;
 
 export function t(locale: Locale, key: MessageKey, vars?: Vars): string {
-  let text = (locale === "en" ? en : zh)[key] ?? zh[key];
+  let text = (locale === "zh" ? zh : en)[key] ?? en[key];
   if (!vars) return text;
   for (const [name, value] of Object.entries(vars)) {
     text = text.replaceAll(`{${name}}`, String(value));

@@ -105,7 +105,7 @@ export function Fretboard({
   lefty = false,
   showNames = false,
   showFretNumbers = true,
-  locale = "zh",
+  locale = "en",
   visibleStrings = "all",
   activeStrings = "all",
   unlockedStrings,

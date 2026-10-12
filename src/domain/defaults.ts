@@ -55,7 +55,7 @@ export function normalizeProfile(raw: Partial<Profile> | null | undefined, now =
     guitarInHand: Boolean(raw.guitarInHand),
     speechEnabled: Boolean(raw.speechEnabled),
     answerSound: Boolean(raw.answerSound),
-    locale: raw.locale === "en" ? "en" : "zh",
+    locale: raw.locale === "zh" || raw.locale === "en" ? raw.locale : base.locale,
     lefty: Boolean(raw.lefty),
     showFretNumbers: Boolean(raw.showFretNumbers),
     introSeen: Boolean(raw.introSeen),

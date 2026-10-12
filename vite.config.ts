@@ -23,14 +23,14 @@ export default defineConfig({
         ],
       },
       manifest: {
-        name: "指板反应",
-        short_name: "指板反应",
-        description: "随时练几分钟，把指板自然音练到大约 2 秒",
+        name: "Fret Reaction",
+        short_name: "Fret Reaction",
+        description: "Practice anytime until natural notes take about two seconds",
         theme_color: "#0c0d0f",
         background_color: "#0c0d0f",
         display: "standalone",
         start_url: "/",
-        lang: "zh-CN",
+        lang: "en",
         icons: [
           {
             src: "icon.svg",

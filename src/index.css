@@ -169,10 +169,6 @@ h2 {
   gap: 8px 14px;
 }
 
-.locate-hint.is-miss {
-  color: var(--bad);
-}
-
 .session-bar {
   display: flex;
   justify-content: space-between;

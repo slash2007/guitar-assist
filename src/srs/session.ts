@@ -46,7 +46,7 @@ export function clipSessionToStage(
   };
 }
 
-export function remainingLabel(session: ActiveSession, locale: Locale = "zh"): string {
+export function remainingLabel(session: ActiveSession, locale: Locale = "en"): string {
   return t(locale, "remain.done", { n: session.answered });
 }
 

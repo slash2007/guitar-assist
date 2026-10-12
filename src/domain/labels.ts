@@ -57,27 +57,27 @@ export function noteLabel(pitch: PitchClass | ChromaticPitch): string {
   return LETTER[pitch];
 }
 
-export function huntPrompt(n: number, pitch: PitchClass, locale: Locale = "zh"): string {
+export function huntPrompt(n: number, pitch: PitchClass, locale: Locale = "en"): string {
   const note = noteLabel(pitch);
   if (locale === "en") return n === 1 ? `Find 1 ${note}` : `Find ${n} ${note}'s`;
   return t(locale, "cue.locateHunt", { n, note });
 }
 
-export function stringFullLabel(string: StringNum, locale: Locale = "zh"): string {
+export function stringFullLabel(string: StringNum, locale: Locale = "en"): string {
   return t(locale, "string.full", { n: string, open: t(locale, OPEN_KEY[string]) });
 }
 
-export function stringShortLabel(string: StringNum, locale: Locale = "zh"): string {
+export function stringShortLabel(string: StringNum, locale: Locale = "en"): string {
   return t(locale, "string.short", { n: string });
 }
 
-export function pathShort(stage: number, locale: Locale = "zh"): string {
+export function pathShort(stage: number, locale: Locale = "en"): string {
   const key = PATH_KEY[stage as keyof typeof PATH_KEY];
   if (key) return t(locale, key);
   return String(stage);
 }
 
-export function stageLabel(stage: number, locale: Locale = "zh"): string {
+export function stageLabel(stage: number, locale: Locale = "en"): string {
   const key = STAGE_KEY[stage as keyof typeof STAGE_KEY];
   if (key) return t(locale, key);
   return t(locale, "stage.fallback", { n: stage });
@@ -90,11 +90,11 @@ const RATING_KEY = {
   4: "rating.4",
 } as const;
 
-export function ratingLabel(rating: Rating, locale: Locale = "zh"): string {
+export function ratingLabel(rating: Rating, locale: Locale = "en"): string {
   return t(locale, RATING_KEY[rating]);
 }
 
-export function stageFocus(stage: number, locale: Locale = "zh"): string {
+export function stageFocus(stage: number, locale: Locale = "en"): string {
   const def = stageDef(stage);
   if (!def) return t(locale, "stage.focusDefault");
   if (stage >= 10) return t(locale, "stage.focusOpen");

@@ -51,12 +51,9 @@ export function SessionView() {
   const { profile, session, commitAnswer, exitSession } = useStore();
   const { t, locale } = useT();
   const [picked, setPicked] = useState<BoardSpot[]>([]);
-  const [nudge, setNudge] = useState<{ spot: BoardSpot; id: number } | null>(null);
   const [feedback, setFeedback] = useState<Feedback | null>(null);
   const busy = useRef(false);
   const pickedRef = useRef<BoardSpot[]>([]);
-  const nudgeTimer = useRef<number>(0);
-  const nudgeId = useRef(0);
   const timerRef = useRef<HTMLDivElement>(null);
   const secRef = useRef<HTMLElement>(null);
 
@@ -88,13 +85,9 @@ export function SessionView() {
     };
   }, [armedAt, questionTimeoutMs]);
 
-  useEffect(() => () => window.clearTimeout(nudgeTimer.current), []);
-
   useEffect(() => {
     setPicked([]);
     pickedRef.current = [];
-    setNudge(null);
-    window.clearTimeout(nudgeTimer.current);
     setFeedback(null);
     busy.current = false;
     armedAtRef.current = null;
@@ -176,10 +169,7 @@ export function SessionView() {
     ? feedback.marks
     : question.kind === "identify"
       ? [{ string: question.string, fret: question.fret, tone: "target" }]
-      : [
-          ...picked.map((spot) => ({ ...spot, tone: "correct" as const })),
-          ...(nudge ? [{ ...nudge.spot, tone: "wrong" as const, id: String(nudge.id) }] : []),
-        ];
+      : picked.map((spot) => ({ ...spot, tone: "correct" as const }));
 
   function measureLatency(timedOut: boolean): number {
     if (timedOut) return questionTimeoutMs;
@@ -256,25 +246,9 @@ export function SessionView() {
     });
   }
 
-  function flashMiss(spot: BoardSpot) {
-    nudgeId.current += 1;
-    const id = nudgeId.current;
-    setNudge({ spot, id });
-    window.clearTimeout(nudgeTimer.current);
-    nudgeTimer.current = window.setTimeout(() => {
-      setNudge((current) => (current?.id === id ? null : current));
-    }, 1600);
-  }
-
   function toggleSpot(string: StringNum, fret: Fret) {
     if (feedback || question?.kind !== "locate" || busy.current) return;
     const result = applyLocateTap(question, picked, { string, fret });
-    if (result.ignored) {
-      flashMiss({ string, fret });
-      return;
-    }
-    setNudge(null);
-    window.clearTimeout(nudgeTimer.current);
     pickedRef.current = result.selected;
     setPicked(result.selected);
     if (result.done) void finishLocate(false, result.selected);
@@ -386,10 +360,10 @@ export function SessionView() {
           })}
         </div>
       ) : locateCollect ? (
-        <p className={`hint locate-hint${nudge ? " is-miss" : ""}`}>
+        <p className="hint locate-hint">
           {t("session.locateNeed", { a: locateHits(question, picked).length, b: question.need })}
           {" · "}
-          {nudge ? t("session.locateMiss") : t("session.locateHuntHint")}
+          {t("session.locateHuntHint")}
         </p>
       ) : (
         <p className="hint">{t("session.locateTap")}</p>

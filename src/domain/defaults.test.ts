@@ -1,4 +1,5 @@
 import { describe, expect, it } from "vitest";
+import { detectLocale } from "../i18n/locale";
 import { normalizeProfile, normalizeSession } from "./defaults";
 import type { ActiveSession } from "./types";
 
@@ -16,6 +17,13 @@ describe("normalizeProfile", () => {
     expect(next.lefty).toBe(false);
     expect(next.showFretNumbers).toBe(false);
     expect(next.introSeen).toBe(false);
+  });
+
+  it("follows the browser locale when none is saved", () => {
+    expect(normalizeProfile(null).locale).toBe(detectLocale());
+    expect(normalizeProfile({}).locale).toBe(detectLocale());
+    expect(normalizeProfile({ locale: "zh" }).locale).toBe("zh");
+    expect(normalizeProfile({ locale: "en" }).locale).toBe("en");
   });
 
   it("keeps a toggle on only when it was saved on", () => {
