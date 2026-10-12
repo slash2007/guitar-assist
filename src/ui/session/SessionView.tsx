@@ -372,10 +372,14 @@ export function SessionView() {
       {feedback ? (
         <p className={`verdict ${feedback.correct ? "is-good" : feedback.partial ? "is-ok" : "is-bad"}`}>
           {feedback.correct ? t("session.verdictOk") : feedback.partial ? t("session.verdictPartial") : t("session.verdictMiss")}
-          {" · "}
-          {formatMs(feedback.latencyMs, locale)}
-          {" · "}
-          {ratingLabel(feedback.rating, locale)}
+          {feedback.correct ? (
+            <>
+              {" · "}
+              {formatMs(feedback.latencyMs, locale)}
+              {" · "}
+              {ratingLabel(feedback.rating, locale)}
+            </>
+          ) : null}
         </p>
       ) : null}
     </section>

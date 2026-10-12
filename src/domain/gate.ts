@@ -37,10 +37,12 @@ export function evaluateGate(
   const timing = timingFor(guitarInHand);
   const cards = cardsForStage(stage);
   const cardSet = new Set<CardId>(cards);
-  const recent = recentByCard(attempts.filter((item) => cardSet.has(item.cardId)));
+  const staged = attempts.filter((item) => cardSet.has(item.cardId));
+  const recent = recentByCard(staged);
+  const recentCorrect = recentByCard(staged.filter((item) => item.correct));
 
-  const identify = recent.filter((item) => isIdentifyId(item.cardId) && item.correct);
-  const locate = recent.filter((item) => !isIdentifyId(item.cardId) && item.correct);
+  const identify = recentCorrect.filter((item) => isIdentifyId(item.cardId));
+  const locate = recentCorrect.filter((item) => !isIdentifyId(item.cardId));
   const identifyMedianMs = median(identify.map((item) => item.latencyMs));
   const locateMedianMs = median(locate.map((item) => item.latencyMs));
   const acc = accuracy(recent.map((item) => item.correct));
