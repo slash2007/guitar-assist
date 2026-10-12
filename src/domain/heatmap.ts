@@ -44,9 +44,12 @@ export function cellHeat(
   const failRate = related.filter((item) => !item.correct).length / related.length;
   if (failRate >= 0.5) return "fail";
 
-  const bands = related.map((item) =>
-    speedBand(item.latencyMs, item.guitarInHand, isIdentifyId(item.cardId) ? "identify" : "locate"),
-  );
+  const bands = related
+    .filter((item) => item.correct)
+    .map((item) =>
+      speedBand(item.latencyMs, item.guitarInHand, isIdentifyId(item.cardId) ? "identify" : "locate"),
+    );
+  if (bands.length === 0) return "fail";
   if (bands.filter((band) => band === "fast").length >= Math.ceil(bands.length / 2)) return "fast";
   if (bands.some((band) => band === "slow")) return "slow";
   return "ok";

@@ -2,7 +2,7 @@ import { isIdentifyId } from "./cards";
 import { isMixStage } from "./hunt";
 import { timingFor } from "./rating";
 import { cardsForStage } from "./stages";
-import { accuracy, median } from "./stats";
+import { accuracy, median, tenthsSec } from "./stats";
 import type { Attempt, CardId } from "./types";
 
 const MIN_ACCURACY = 0.9;
@@ -39,8 +39,8 @@ export function evaluateGate(
   const cardSet = new Set<CardId>(cards);
   const recent = recentByCard(attempts.filter((item) => cardSet.has(item.cardId)));
 
-  const identify = recent.filter((item) => isIdentifyId(item.cardId));
-  const locate = recent.filter((item) => !isIdentifyId(item.cardId));
+  const identify = recent.filter((item) => isIdentifyId(item.cardId) && item.correct);
+  const locate = recent.filter((item) => !isIdentifyId(item.cardId) && item.correct);
   const identifyMedianMs = median(identify.map((item) => item.latencyMs));
   const locateMedianMs = median(locate.map((item) => item.latencyMs));
   const acc = accuracy(recent.map((item) => item.correct));
@@ -52,8 +52,8 @@ export function evaluateGate(
   const seenCards = cards.filter((id) => (counts.get(id) ?? 0) >= 1).length;
   const needsSeen = !isMixStage(stage);
 
-  const identifyOk = identifyMedianMs !== null && identifyMedianMs <= timing.identifyEasyMs;
-  const locateOk = locateMedianMs !== null && locateMedianMs <= timing.locateEasyMs;
+  const identifyOk = speedOk(identifyMedianMs, timing.identifyEasyMs);
+  const locateOk = speedOk(locateMedianMs, timing.locateEasyMs);
   const accuracyOk = (acc ?? 0) >= MIN_ACCURACY;
   const coverageOk = !needsSeen || seenCards === cards.length;
 
@@ -62,8 +62,8 @@ export function evaluateGate(
     identifyMedianMs,
     locateMedianMs,
     accuracy: acc,
-    identifyGapMs: identifyMedianMs === null ? null : Math.max(0, identifyMedianMs - timing.identifyEasyMs),
-    locateGapMs: locateMedianMs === null ? null : Math.max(0, locateMedianMs - timing.locateEasyMs),
+    identifyGapMs: speedGapMs(identifyMedianMs, timing.identifyEasyMs),
+    locateGapMs: speedGapMs(locateMedianMs, timing.locateEasyMs),
     seenCards,
     totalCards: cards.length,
     attemptCount: recent.length,
@@ -85,6 +85,15 @@ export function primaryBlocker(stage: number, gate: GateReport): GateBlocker {
   if (!gate.accuracyOk) return "accuracy";
   if (stage >= 10) return "open";
   return "ready";
+}
+
+function speedOk(medianMs: number | null, targetMs: number): boolean {
+  return medianMs !== null && tenthsSec(medianMs) <= tenthsSec(targetMs);
+}
+
+function speedGapMs(medianMs: number | null, targetMs: number): number | null {
+  if (medianMs === null) return null;
+  return Math.max(0, Math.round((tenthsSec(medianMs) - tenthsSec(targetMs)) * 1000));
 }
 
 function recentByCard(attempts: readonly Attempt[]): Attempt[] {

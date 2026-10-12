@@ -44,6 +44,30 @@ describe("evaluateGate", () => {
     expect(evaluateGate(1, filled, true).passed).toBe(true);
   });
 
+  it("treats a 2.0s display median as on target", () => {
+    const justInside = evaluateGate(1, fillStage(1, 2049), false);
+    expect(justInside.identifyOk).toBe(true);
+    expect(justInside.locateOk).toBe(true);
+    expect(justInside.passed).toBe(true);
+
+    const justOutside = evaluateGate(1, fillStage(1, 2050), false);
+    expect(justOutside.identifyOk).toBe(false);
+    expect(justOutside.identifyGapMs).toBe(100);
+    expect(primaryBlocker(1, justOutside)).toBe("identify");
+  });
+
+  it("scores speed from correct answers only", () => {
+    const slow = fillStage(1, 2800);
+    const mash = [
+      attempt(identifyId(6, 0), false, 180, "2026-01-01T00:02:00.000Z"),
+      attempt(locateId(6, "E"), false, 160, "2026-01-01T00:02:01.000Z"),
+    ];
+    const gate = evaluateGate(1, [...slow, ...mash], false);
+    expect(gate.identifyOk).toBe(false);
+    expect(gate.locateOk).toBe(false);
+    expect(gate.accuracyOk).toBe(false);
+  });
+
   it("does not require every mix-stage card to have been seen", () => {
     const mix = evaluateGate(
       3,

@@ -1,3 +1,8 @@
+/** Same 0.1s bucket the UI shows, so 2049ms and 2.0s are the same number. */
+export function tenthsSec(ms: number): number {
+  return Math.round(ms / 100) / 10;
+}
+
 export function median(values: readonly number[]): number | null {
   if (values.length === 0) return null;
   const sorted = [...values].sort((a, b) => a - b);

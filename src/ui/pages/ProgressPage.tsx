@@ -72,7 +72,7 @@ export function ProgressPage() {
         {days.map((day) => {
           const dayAttempts = attempts.filter((item) => attemptDateKey(item.at) === day);
           const done = dayAttempts.length > 0;
-          const med = median(dayAttempts.map((item) => item.latencyMs));
+          const med = median(dayAttempts.filter((item) => item.correct).map((item) => item.latencyMs));
           return (
             <li key={day} className={done ? "is-done" : ""}>
               <span>{Number(day.slice(8))}</span>

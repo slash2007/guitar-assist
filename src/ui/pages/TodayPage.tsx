@@ -3,7 +3,7 @@ import { evaluateGate, primaryBlocker } from "../../domain/gate";
 import { stageFocus, stageLabel } from "../../domain/labels";
 import { stageDef, unlockedStrings } from "../../domain/stages";
 import { remainingLabel } from "../../srs/session";
-import { formatMs, formatPct } from "../format";
+import { formatPct } from "../format";
 import { Fretboard } from "../fretboard/Fretboard";
 import { blockerText } from "../gateCopy";
 import { PageHeader } from "../PageHeader";
@@ -22,7 +22,6 @@ export function TodayPage() {
   const focus = stageDef(profile.stage)?.strings ?? [6];
   const unlocked = unlockedStrings(profile.stage);
   const currentName = stageLabel(profile.stage, locale);
-  const ms = (value: number | null) => formatMs(value, locale);
   const showIntro = !profile.introSeen && !profile.lastSessionDate && attempts.length === 0 && !paused && !hideIntro;
 
   useEffect(() => {
@@ -76,7 +75,6 @@ export function TodayPage() {
             ),
             n: latest.answered,
             pct: formatPct(latest.answered ? latest.correct / latest.answered : null),
-            ms: ms(latest.medianMs),
           })}
         </p>
       ) : null}

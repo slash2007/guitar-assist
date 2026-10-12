@@ -12,9 +12,11 @@ export function blockerText(kind: GateBlocker, gate: GateReport, locale: Locale,
     return t(locale, "blocker.coverage", { a: gate.seenCards, b: gate.totalCards });
   }
   if (kind === "identify") {
+    if (gate.identifyMedianMs === null) return t(locale, "blocker.identifyNone");
     return t(locale, "blocker.identify", { ms: ms(gate.identifyGapMs), target: ms(gate.identifyTargetMs) });
   }
   if (kind === "locate") {
+    if (gate.locateMedianMs === null) return t(locale, "blocker.locateNone");
     return t(locale, "blocker.locate", { ms: ms(gate.locateGapMs), target: ms(gate.locateTargetMs) });
   }
   if (kind === "accuracy") return t(locale, "blocker.accuracy", { pct: formatPct(gate.accuracy) });
@@ -35,11 +37,17 @@ export function gateChecks(gate: GateReport, locale: Locale): Array<{ ok: boolea
   checks.push(
     {
       ok: gate.identifyOk,
-      text: t(locale, "progress.checkIdentify", { ms: ms(gate.identifyMedianMs), target: ms(gate.identifyTargetMs) }),
+      text:
+        gate.identifyMedianMs === null
+          ? t(locale, "progress.checkIdentifyNone", { target: ms(gate.identifyTargetMs) })
+          : t(locale, "progress.checkIdentify", { ms: ms(gate.identifyMedianMs), target: ms(gate.identifyTargetMs) }),
     },
     {
       ok: gate.locateOk,
-      text: t(locale, "progress.checkLocate", { ms: ms(gate.locateMedianMs), target: ms(gate.locateTargetMs) }),
+      text:
+        gate.locateMedianMs === null
+          ? t(locale, "progress.checkLocateNone", { target: ms(gate.locateTargetMs) })
+          : t(locale, "progress.checkLocate", { ms: ms(gate.locateMedianMs), target: ms(gate.locateTargetMs) }),
     },
     {
       ok: gate.accuracyOk,
