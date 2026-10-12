@@ -1,4 +1,5 @@
 import { createContext, useContext, useEffect, useMemo, useState, type ReactNode } from "react";
+import { accuracyBand, track } from "../analytics";
 import { cancelSpeech } from "../audio/speak";
 import { armOutputUnlock, primeOutput } from "../audio/unlock";
 import {
@@ -117,6 +118,11 @@ export function StoreProvider({ children }: { children: ReactNode }) {
     if (!ready) return;
     return armOutputUnlock();
   }, [ready]);
+
+  useEffect(() => {
+    if (!ready) return;
+    track("tab", { name: tab === "today" ? "practice" : tab });
+  }, [ready, tab]);
 
   const cardMap = useMemo(() => new Map(cards.map((card) => [card.id, card])), [cards]);
 
@@ -285,6 +291,12 @@ export function StoreProvider({ children }: { children: ReactNode }) {
           db.saveProfile(nextProfile),
           db.saveSummaries(nextSummaries),
         ]);
+        track("session_complete", {
+          stage: summary.stage,
+          questions: summary.answered,
+          accuracy: accuracyBand(summary.correct, summary.answered),
+        });
+        if (advancedTo) track("stage_advance", { stage: advancedTo });
         return { ended: true, summary };
       },
       async resumeSession() {
