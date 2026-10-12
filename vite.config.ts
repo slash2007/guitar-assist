@@ -11,6 +11,7 @@ export default defineConfig({
       workbox: {
         globPatterns: ["**/*.{js,css,html,svg,woff2,webmanifest}"],
         globIgnores: ["**/audio/**"],
+        navigateFallbackDenylist: [/^\/api\//],
         runtimeCaching: [
           {
             urlPattern: /\/audio\/.*\.wav$/,

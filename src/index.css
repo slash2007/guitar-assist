@@ -454,6 +454,7 @@ h2 {
   border: 1px solid var(--line);
   border-radius: 12px;
   background: var(--bg-elev);
+  cursor: pointer;
 }
 
 .setting-copy {
@@ -494,6 +495,20 @@ h2 {
   background: var(--accent-2);
   color: var(--ink);
   font-weight: 700;
+}
+
+.ghost-btn,
+.danger-btn,
+.primary-btn,
+.text-btn,
+.lang-toggle button,
+.tabbar button,
+.setting,
+.toggles label {
+  transition:
+    background 0.15s ease,
+    color 0.15s ease,
+    border-color 0.15s ease;
 }
 
 .ghost-btn,
@@ -569,6 +584,33 @@ h2 {
 
 .intro-points li + li {
   margin-top: 8px;
+}
+
+.feedback-sheet .lede {
+  margin-bottom: 14px;
+}
+
+.feedback-field {
+  display: grid;
+  gap: 6px;
+  margin-bottom: 12px;
+  color: var(--muted);
+  font-size: 0.88rem;
+}
+
+.feedback-field textarea,
+.feedback-field input,
+.feedback-field select {
+  width: 100%;
+  background: var(--bg);
+  color: var(--text);
+  border: 1px solid var(--line);
+  border-radius: 10px;
+  padding: 10px 12px;
+}
+
+.feedback-field textarea {
+  resize: vertical;
 }
 
 .text-btn {
@@ -940,8 +982,29 @@ h2 {
 }
 
 @media (hover: hover) and (pointer: fine) {
-  .primary-btn:hover {
+  .primary-btn:hover:not(:disabled) {
     background: var(--text);
+  }
+
+  .ghost-btn:hover:not(:disabled) {
+    background: var(--bg-soft);
+    color: var(--accent-2);
+    border-color: var(--accent);
+  }
+
+  .text-btn:hover,
+  .lang-toggle button:hover:not(.is-on),
+  .tabbar button:hover:not(.is-on) {
+    color: var(--accent-2);
+  }
+
+  .danger-btn:hover:not(:disabled) {
+    background: color-mix(in srgb, var(--bad) 28%, transparent);
+  }
+
+  .setting:hover,
+  .toggles label:hover {
+    border-color: var(--accent);
   }
 
   .choice.is-natural:hover:not(:disabled) {
