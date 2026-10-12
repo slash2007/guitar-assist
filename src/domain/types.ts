@@ -114,6 +114,7 @@ export interface ActiveSession {
 
 export interface SessionSummary {
   at: string;
+  startedAt?: string;
   kind: SessionKind;
   answered: number;
   correct: number;

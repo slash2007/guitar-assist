@@ -11,13 +11,20 @@ export function blockerText(kind: GateBlocker, gate: GateReport, locale: Locale,
     }
     return t(locale, "blocker.coverage", { a: gate.seenCards, b: gate.totalCards });
   }
+  if (kind === "round") return t(locale, "blocker.round");
   if (kind === "identify") {
-    if (gate.identifyMedianMs === null) return t(locale, "blocker.identifyNone");
-    return t(locale, "blocker.identify", { ms: ms(gate.identifyGapMs), target: ms(gate.identifyTargetMs) });
+    if (gate.identifyCorrect === 0) return t(locale, "blocker.identifyNone");
+    return t(locale, "blocker.identify", {
+      ms: ms(gate.slowestIdentifyMs),
+      target: ms(gate.identifyTargetMs),
+    });
   }
   if (kind === "locate") {
-    if (gate.locateMedianMs === null) return t(locale, "blocker.locateNone");
-    return t(locale, "blocker.locate", { ms: ms(gate.locateGapMs), target: ms(gate.locateTargetMs) });
+    if (gate.locateCorrect === 0) return t(locale, "blocker.locateNone");
+    return t(locale, "blocker.locate", {
+      ms: ms(gate.slowestLocateMs),
+      target: ms(gate.locateTargetMs),
+    });
   }
   if (kind === "accuracy") return t(locale, "blocker.accuracy", { pct: formatPct(gate.accuracy) });
   if (kind === "open") return t(locale, "blocker.open");
@@ -34,25 +41,40 @@ export function gateChecks(gate: GateReport, locale: Locale): Array<{ ok: boolea
       hint: t(locale, "progress.checkCoverageHint"),
     });
   }
-  checks.push(
-    {
-      ok: gate.identifyOk,
-      text:
-        gate.identifyMedianMs === null
-          ? t(locale, "progress.checkIdentifyNone", { target: ms(gate.identifyTargetMs) })
-          : t(locale, "progress.checkIdentify", { ms: ms(gate.identifyMedianMs), target: ms(gate.identifyTargetMs) }),
-    },
-    {
-      ok: gate.locateOk,
-      text:
-        gate.locateMedianMs === null
-          ? t(locale, "progress.checkLocateNone", { target: ms(gate.locateTargetMs) })
-          : t(locale, "progress.checkLocate", { ms: ms(gate.locateMedianMs), target: ms(gate.locateTargetMs) }),
-    },
-    {
-      ok: gate.accuracyOk,
-      text: t(locale, "progress.checkAccuracy", { pct: formatPct(gate.accuracy) }),
-    },
-  );
+  if (!gate.hasRound || gate.identifyAsked) {
+    checks.push({
+      ok: gate.identifyOk && gate.accuracyOk,
+      text: speedLine(locale, "identify", gate, ms(gate.identifyTargetMs), ms(gate.slowestIdentifyMs)),
+    });
+  }
+  if (!gate.hasRound || gate.locateAsked) {
+    checks.push({
+      ok: gate.locateOk && gate.accuracyOk,
+      text: speedLine(locale, "locate", gate, ms(gate.locateTargetMs), ms(gate.slowestLocateMs)),
+    });
+  }
+  checks.push({
+    ok: gate.accuracyOk,
+    text: t(locale, "progress.checkAccuracy", { pct: formatPct(gate.accuracy) }),
+  });
   return checks;
+}
+
+function speedLine(
+  locale: Locale,
+  kind: "identify" | "locate",
+  gate: GateReport,
+  target: string,
+  slowest: string,
+): string {
+  const correct = kind === "identify" ? gate.identifyCorrect : gate.locateCorrect;
+  const within = kind === "identify" ? gate.identifyOk : gate.locateOk;
+  const noneKey = kind === "identify" ? "progress.checkIdentifyNone" : "progress.checkLocateNone";
+  const slowKey = kind === "identify" ? "progress.checkIdentifySlow" : "progress.checkLocateSlow";
+  const countKey = kind === "identify" ? "progress.checkIdentifyCount" : "progress.checkLocateCount";
+  const okKey = kind === "identify" ? "progress.checkIdentify" : "progress.checkLocate";
+  if (!gate.hasRound || correct === 0) return t(locale, noneKey, { target });
+  if (!within) return t(locale, slowKey, { target, ms: slowest });
+  if (!gate.accuracyOk) return t(locale, countKey, { n: correct, target });
+  return t(locale, okKey, { target });
 }

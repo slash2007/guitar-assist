@@ -1,4 +1,4 @@
-import { evaluateGate } from "../../domain/gate";
+import { evaluateGate, latestStageRound } from "../../domain/gate";
 import { buildHeatmap } from "../../domain/heatmap";
 import { stageDef, unlockedStrings } from "../../domain/stages";
 import { attemptDateKey, lastNDateKeys, localDateKey, median } from "../../domain/stats";
@@ -11,12 +11,13 @@ import { useStore } from "../store";
 import { useT } from "../useT";
 
 export function ProgressPage() {
-  const { profile, attempts } = useStore();
+  const { profile, attempts, summaries } = useStore();
   const { t, locale } = useT();
   const unlocked = unlockedStrings(profile.stage);
   const focus = stageDef(profile.stage)?.strings ?? unlocked;
   const heat = buildHeatmap(unlocked, attempts);
-  const gate = evaluateGate(Math.max(1, profile.stage), attempts, profile.guitarInHand);
+  const stage = Math.max(1, profile.stage);
+  const gate = evaluateGate(stage, attempts, profile.guitarInHand, latestStageRound(stage, summaries));
   const checks = gateChecks(gate, locale);
   const days = lastNDateKeys(7);
   const ms = (value: number | null) => formatMs(value, locale);

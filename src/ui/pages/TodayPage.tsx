@@ -1,5 +1,5 @@
 import { useEffect, useState } from "react";
-import { evaluateGate, primaryBlocker } from "../../domain/gate";
+import { evaluateGate, latestStageRound, primaryBlocker } from "../../domain/gate";
 import { stageFocus, stageLabel } from "../../domain/labels";
 import { stageDef, unlockedStrings } from "../../domain/stages";
 import { remainingLabel } from "../../srs/session";
@@ -16,7 +16,7 @@ export function TodayPage() {
   const { t, locale } = useT();
   const [hideIntro, setHideIntro] = useState(false);
   const latest = summaries[0];
-  const gate = evaluateGate(profile.stage, attempts, profile.guitarInHand);
+  const gate = evaluateGate(profile.stage, attempts, profile.guitarInHand, latestStageRound(profile.stage, summaries));
   const blocker = primaryBlocker(profile.stage, gate);
   const paused = Boolean(session?.paused);
   const focus = stageDef(profile.stage)?.strings ?? [6];

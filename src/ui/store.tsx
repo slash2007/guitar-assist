@@ -9,7 +9,7 @@ import {
   normalizeSession,
   normalizeSummaries,
 } from "../domain/defaults";
-import { evaluateGate } from "../domain/gate";
+import { evaluateGate, type GateRound } from "../domain/gate";
 import { randomRng } from "../domain/rng";
 import { nextStage } from "../domain/stages";
 import { localDateKey, median } from "../domain/stats";
@@ -252,7 +252,8 @@ export function StoreProvider({ children }: { children: ReactNode }) {
         }
 
         let advancedTo: number | undefined;
-        const gate = evaluateGate(nextProfile.stage, nextAttempts, nextProfile.guitarInHand);
+        const round: GateRound = { startedAt: session.startedAt, endedAt: now.toISOString() };
+        const gate = evaluateGate(nextProfile.stage, nextAttempts, nextProfile.guitarInHand, round);
         if (gate.passed && nextProfile.stage < 10) {
           advancedTo = nextStage(nextProfile.stage);
           nextProfile = { ...nextProfile, stage: advancedTo };
@@ -263,6 +264,7 @@ export function StoreProvider({ children }: { children: ReactNode }) {
         const sessionAttempts = nextAttempts.filter((item) => item.at >= session.startedAt);
         const summary: SessionSummary = {
           at: now.toISOString(),
+          startedAt: session.startedAt,
           kind: session.kind,
           answered: nextSession.answered,
           correct: nextSession.correctCount ?? 0,
