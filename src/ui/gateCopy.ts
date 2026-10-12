@@ -5,12 +5,11 @@ import { formatMs, formatPct } from "./format";
 
 export function blockerText(kind: GateBlocker, gate: GateReport, locale: Locale, stageName = ""): string {
   const ms = (value: number | null) => formatMs(value, locale);
-  if (kind === "coverage-repeat") return t(locale, "blocker.coverageRepeat");
   if (kind === "coverage") {
-    if (gate.coveredCards === 0) {
+    if (gate.seenCards === 0) {
       return t(locale, "blocker.coverageZero", { name: stageName, b: gate.totalCards });
     }
-    return t(locale, "blocker.coverage", { a: gate.coveredCards, b: gate.totalCards });
+    return t(locale, "blocker.coverage", { a: gate.seenCards, b: gate.totalCards });
   }
   if (kind === "identify") {
     return t(locale, "blocker.identify", { ms: ms(gate.identifyGapMs), target: ms(gate.identifyTargetMs) });
@@ -19,19 +18,21 @@ export function blockerText(kind: GateBlocker, gate: GateReport, locale: Locale,
     return t(locale, "blocker.locate", { ms: ms(gate.locateGapMs), target: ms(gate.locateTargetMs) });
   }
   if (kind === "accuracy") return t(locale, "blocker.accuracy", { pct: formatPct(gate.accuracy) });
-  if (kind === "volume") return t(locale, "blocker.volume");
   if (kind === "open") return t(locale, "blocker.open");
   return t(locale, "blocker.ready");
 }
 
 export function gateChecks(gate: GateReport, locale: Locale): Array<{ ok: boolean; text: string; hint?: string }> {
   const ms = (value: number | null) => formatMs(value, locale);
-  return [
-    {
+  const checks: Array<{ ok: boolean; text: string; hint?: string }> = [];
+  if (gate.needsSeen) {
+    checks.push({
       ok: gate.coverageOk,
-      text: t(locale, "progress.checkCoverage", { a: gate.coveredCards, b: gate.totalCards }),
+      text: t(locale, "progress.checkCoverage", { a: gate.seenCards, b: gate.totalCards }),
       hint: t(locale, "progress.checkCoverageHint"),
-    },
+    });
+  }
+  checks.push(
     {
       ok: gate.identifyOk,
       text: t(locale, "progress.checkIdentify", { ms: ms(gate.identifyMedianMs), target: ms(gate.identifyTargetMs) }),
@@ -44,5 +45,6 @@ export function gateChecks(gate: GateReport, locale: Locale): Array<{ ok: boolea
       ok: gate.accuracyOk,
       text: t(locale, "progress.checkAccuracy", { pct: formatPct(gate.accuracy) }),
     },
-  ];
+  );
+  return checks;
 }

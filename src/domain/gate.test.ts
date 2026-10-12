@@ -16,50 +16,46 @@ function attempt(cardId: Attempt["cardId"], correct: boolean, latencyMs: number,
   };
 }
 
+function fillStage(stage: number, latencyMs: number): Attempt[] {
+  return cardsForStage(stage).map((id, i) =>
+    attempt(id, true, latencyMs, `2026-01-01T00:00:${String(i).padStart(2, "0")}.000Z`),
+  );
+}
+
 describe("evaluateGate", () => {
-  it("stays closed until coverage and speed are both there", () => {
+  it("keeps a single-string stage closed until every card has been seen", () => {
     const closed = evaluateGate(1, [
       attempt(identifyId(6, 0), true, 1200, "2026-01-01T00:00:00.000Z"),
       attempt(locateId(6, "E"), true, 1400, "2026-01-01T00:00:01.000Z"),
     ]);
+    expect(closed.needsSeen).toBe(true);
     expect(closed.passed).toBe(false);
+    expect(primaryBlocker(1, closed)).toBe("coverage");
 
-    const cards = cardsForStage(1);
-    const filled: Attempt[] = [];
-    let i = 0;
-    for (const id of cards) {
-      filled.push(attempt(id, true, 1500, `2026-01-01T00:00:${String(i).padStart(2, "0")}.000Z`));
-      i += 1;
-      filled.push(attempt(id, true, 1600, `2026-01-01T00:01:${String(i).padStart(2, "0")}.000Z`));
-      i += 1;
-    }
-    const opened = evaluateGate(1, filled, false);
+    const opened = evaluateGate(1, fillStage(1, 1500), false);
     expect(opened.passed).toBe(true);
+    expect(opened.seenCards).toBe(opened.totalCards);
     expect(primaryBlocker(1, opened)).toBe("ready");
   });
 
   it("uses a looser speed gate when practicing with a guitar", () => {
-    const cards = cardsForStage(1);
-    const filled: Attempt[] = [];
-    let i = 0;
-    for (const id of cards) {
-      filled.push(attempt(id, true, 3000, `2026-01-01T00:00:${String(i).padStart(2, "0")}.000Z`));
-      i += 1;
-      filled.push(attempt(id, true, 3200, `2026-01-01T00:01:${String(i).padStart(2, "0")}.000Z`));
-      i += 1;
-    }
+    const filled = fillStage(1, 3000);
     expect(evaluateGate(1, filled, false).passed).toBe(false);
     expect(evaluateGate(1, filled, true).passed).toBe(true);
   });
 
-  it("treats one pass through every unit as coverage-repeat, not practiced-enough", () => {
-    const cards = cardsForStage(1);
-    const once: Attempt[] = cards.map((id, i) =>
-      attempt(id, true, 1500, `2026-01-01T00:00:${String(i).padStart(2, "0")}.000Z`),
+  it("does not require every mix-stage card to have been seen", () => {
+    const mix = evaluateGate(
+      3,
+      [
+        attempt(identifyId(6, 0), true, 1200, "2026-01-01T00:00:00.000Z"),
+        attempt(locateId(6, "E"), true, 1400, "2026-01-01T00:00:01.000Z"),
+      ],
+      false,
     );
-    const gate = evaluateGate(1, once, false);
-    expect(gate.seenCards).toBe(gate.totalCards);
-    expect(gate.coveredCards).toBe(0);
-    expect(primaryBlocker(1, gate)).toBe("coverage-repeat");
+    expect(mix.needsSeen).toBe(false);
+    expect(mix.coverageOk).toBe(true);
+    expect(mix.passed).toBe(true);
+    expect(primaryBlocker(3, mix)).toBe("ready");
   });
 });

@@ -1,11 +1,10 @@
 import { isIdentifyId } from "./cards";
+import { isMixStage } from "./hunt";
 import { timingFor } from "./rating";
 import { cardsForStage } from "./stages";
 import { accuracy, median } from "./stats";
 import type { Attempt, CardId } from "./types";
 
-const MIN_ATTEMPTS_PER_CARD = 2;
-const MIN_STAGE_ATTEMPTS = 24;
 const MIN_ACCURACY = 0.9;
 const RECENT_PER_CARD = 4;
 
@@ -16,28 +15,19 @@ export interface GateReport {
   accuracy: number | null;
   identifyGapMs: number | null;
   locateGapMs: number | null;
-  coveredCards: number;
   seenCards: number;
   totalCards: number;
   attemptCount: number;
   identifyTargetMs: number;
   locateTargetMs: number;
+  needsSeen: boolean;
   coverageOk: boolean;
   identifyOk: boolean;
   locateOk: boolean;
   accuracyOk: boolean;
-  volumeOk: boolean;
 }
 
-export type GateBlocker =
-  | "coverage-repeat"
-  | "coverage"
-  | "identify"
-  | "locate"
-  | "accuracy"
-  | "volume"
-  | "ready"
-  | "open";
+export type GateBlocker = "coverage" | "identify" | "locate" | "accuracy" | "ready" | "open";
 
 export function evaluateGate(
   stage: number,
@@ -59,46 +49,40 @@ export function evaluateGate(
   for (const item of recent) {
     counts.set(item.cardId, (counts.get(item.cardId) ?? 0) + 1);
   }
-  const coveredCards = cards.filter((id) => (counts.get(id) ?? 0) >= MIN_ATTEMPTS_PER_CARD).length;
   const seenCards = cards.filter((id) => (counts.get(id) ?? 0) >= 1).length;
+  const needsSeen = !isMixStage(stage);
 
   const identifyOk = identifyMedianMs !== null && identifyMedianMs <= timing.identifyEasyMs;
   const locateOk = locateMedianMs !== null && locateMedianMs <= timing.locateEasyMs;
   const accuracyOk = (acc ?? 0) >= MIN_ACCURACY;
-  const coverageOk = coveredCards === cards.length;
-  const volumeOk = recent.length >= MIN_STAGE_ATTEMPTS;
+  const coverageOk = !needsSeen || seenCards === cards.length;
 
   return {
-    passed: identifyOk && locateOk && accuracyOk && coverageOk && volumeOk,
+    passed: identifyOk && locateOk && accuracyOk && coverageOk,
     identifyMedianMs,
     locateMedianMs,
     accuracy: acc,
     identifyGapMs: identifyMedianMs === null ? null : Math.max(0, identifyMedianMs - timing.identifyEasyMs),
     locateGapMs: locateMedianMs === null ? null : Math.max(0, locateMedianMs - timing.locateEasyMs),
-    coveredCards,
     seenCards,
     totalCards: cards.length,
     attemptCount: recent.length,
     identifyTargetMs: timing.identifyEasyMs,
     locateTargetMs: timing.locateEasyMs,
+    needsSeen,
     coverageOk,
     identifyOk,
     locateOk,
     accuracyOk,
-    volumeOk,
   };
 }
 
 export function primaryBlocker(stage: number, gate: GateReport): GateBlocker {
   if (stage >= 10 && gate.passed) return "open";
-  if (!gate.coverageOk) {
-    if (gate.seenCards >= gate.totalCards && gate.coveredCards < gate.totalCards) return "coverage-repeat";
-    return "coverage";
-  }
+  if (!gate.coverageOk) return "coverage";
   if (!gate.identifyOk) return "identify";
   if (!gate.locateOk) return "locate";
   if (!gate.accuracyOk) return "accuracy";
-  if (!gate.volumeOk) return "volume";
   if (stage >= 10) return "open";
   return "ready";
 }
