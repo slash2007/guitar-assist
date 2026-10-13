@@ -110,6 +110,8 @@ export interface ActiveSession {
   dueCount: number;
   newIntroduced: number;
   paused?: boolean;
+  /** First question after start or resume. Timer waits briefly when speech is off. */
+  prepare?: boolean;
 }
 
 export interface SessionSummary {

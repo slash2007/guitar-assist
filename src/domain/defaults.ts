@@ -83,6 +83,7 @@ export function normalizeSession(raw: ActiveSession | null | undefined, now = ne
     dueCount: raw.dueCount ?? 0,
     newIntroduced: raw.newIntroduced ?? 0,
     paused: raw.paused,
+    prepare: raw.prepare === true ? true : undefined,
   };
 }
 

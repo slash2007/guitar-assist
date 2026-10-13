@@ -1,4 +1,4 @@
-import { createContext, useContext, useEffect, useMemo, useState, type ReactNode } from "react";
+import { createContext, useContext, useEffect, useMemo, useRef, useState, type ReactNode } from "react";
 import { accuracyBand, track } from "../analytics";
 import { cancelSpeech } from "../audio/speak";
 import { armOutputUnlock, primeOutput } from "../audio/unlock";
@@ -80,6 +80,19 @@ export function StoreProvider({ children }: { children: ReactNode }) {
   const [settingsFrom, setSettingsFrom] = useState<MainTab>("today");
   const [error, setError] = useState<string | null>(null);
   const [advanceTo, setAdvanceTo] = useState<number | null>(null);
+  const sessionRef = useRef<ActiveSession | null>(null);
+  const sessionWrite = useRef(Promise.resolve());
+
+  function writeSession(next: ActiveSession | null) {
+    sessionRef.current = next;
+    setSession(next);
+    const pending = sessionWrite.current.then(() => db.saveSession(next));
+    sessionWrite.current = pending.then(
+      () => undefined,
+      () => undefined,
+    );
+    return pending;
+  }
 
   useEffect(() => {
     void (async () => {
@@ -98,6 +111,7 @@ export function StoreProvider({ children }: { children: ReactNode }) {
       setCards(nextCards);
       setAttempts(pruneAttempts(nextAttempts));
       setDaily(ensureDaily(nextDaily));
+      sessionRef.current = nextSession;
       setSession(nextSession);
       setSummaries(nextSummaries);
       setReady(true);
@@ -108,10 +122,10 @@ export function StoreProvider({ children }: { children: ReactNode }) {
 
   useEffect(() => {
     if (!ready || !session) return;
+    if (sessionRef.current !== session) return;
     const clipped = clipSessionToStage(session, profile.stage);
     if (clipped === session) return;
-    setSession(clipped);
-    void db.saveSession(clipped);
+    void writeSession(clipped);
   }, [ready, session, profile.stage]);
 
   useEffect(() => {
@@ -175,11 +189,11 @@ export function StoreProvider({ children }: { children: ReactNode }) {
           correctCount: 0,
           dueCount: built.dueCount,
           newIntroduced: 0,
+          prepare: true,
         };
         setError(null);
         setDaily(today);
-        setSession(next);
-        await Promise.all([db.saveDaily(today), db.saveSession(next)]);
+        await Promise.all([writeSession(next), db.saveDaily(today)]);
       },
       async commitAnswer(input) {
         if (!session) return { ended: false, summary: null };
@@ -218,6 +232,7 @@ export function StoreProvider({ children }: { children: ReactNode }) {
           correctCount: (session.correctCount ?? 0) + (input.correct ? 1 : 0),
           questionShownAt: now.toISOString(),
           newIntroduced: session.newIntroduced + unseenCount,
+          prepare: undefined,
         };
 
         setCards(nextCards);
@@ -250,10 +265,10 @@ export function StoreProvider({ children }: { children: ReactNode }) {
 
         const ended = shouldEndSession(nextSession);
         if (!ended) {
-          setSession(nextSession);
+          if (sessionRef.current?.paused) nextSession = { ...nextSession, paused: true };
           setDaily(nextDaily);
           setProfile(nextProfile);
-          await Promise.all([db.saveSession(nextSession), db.saveDaily(nextDaily), db.saveProfile(nextProfile)]);
+          await Promise.all([writeSession(nextSession), db.saveDaily(nextDaily), db.saveProfile(nextProfile)]);
           return { ended: false, summary: null };
         }
 
@@ -280,13 +295,12 @@ export function StoreProvider({ children }: { children: ReactNode }) {
         };
         const nextSummaries = [summary, ...summaries].slice(0, 14);
         cancelSpeech();
-        setSession(null);
         setDaily(nextDaily);
         setProfile(nextProfile);
         setSummaries(nextSummaries);
         if (advancedTo) setAdvanceTo(advancedTo);
         await Promise.all([
-          db.saveSession(null),
+          writeSession(null),
           db.saveDaily(nextDaily),
           db.saveProfile(nextProfile),
           db.saveSummaries(nextSummaries),
@@ -300,25 +314,22 @@ export function StoreProvider({ children }: { children: ReactNode }) {
         return { ended: true, summary };
       },
       async resumeSession() {
-        if (!session) return;
-        const clipped = clipSessionToStage(session, profile.stage);
+        const current = sessionRef.current;
+        if (!current) return;
+        const clipped = clipSessionToStage(current, profile.stage);
         if (!clipped) {
-          setSession(null);
-          await db.saveSession(null);
+          await writeSession(null);
           return;
         }
         primeOutput();
         const now = new Date();
-        const next = { ...clipped, paused: false, questionShownAt: now.toISOString() };
-        setSession(next);
-        await db.saveSession(next);
+        await writeSession({ ...clipped, paused: false, questionShownAt: now.toISOString(), prepare: true });
       },
       async exitSession() {
-        if (!session) return;
+        const current = sessionRef.current;
+        if (!current || current.paused) return;
         cancelSpeech();
-        const next = { ...session, paused: true };
-        setSession(next);
-        await db.saveSession(next);
+        await writeSession({ ...current, paused: true });
       },
       async updateProfile(patch) {
         const next = { ...profile, ...patch };
@@ -341,7 +352,6 @@ export function StoreProvider({ children }: { children: ReactNode }) {
         setCards(payload.cards);
         setAttempts(nextAttempts);
         setDaily(nextDaily);
-        setSession(nextSession);
         setSummaries([]);
         setAdvanceTo(null);
         await Promise.all([
@@ -349,7 +359,7 @@ export function StoreProvider({ children }: { children: ReactNode }) {
           db.replaceCards(payload.cards),
           db.replaceAttempts(nextAttempts),
           db.saveDaily(nextDaily),
-          db.saveSession(nextSession),
+          writeSession(nextSession),
         ]);
       },
       async resetProgress() {
@@ -361,10 +371,10 @@ export function StoreProvider({ children }: { children: ReactNode }) {
         setCards([]);
         setAttempts([]);
         setDaily(nextDaily);
-        setSession(null);
         setSummaries([]);
         setAdvanceTo(null);
         setTab("today");
+        await writeSession(null);
       },
     };
   }, [advanceTo, attempts, cardMap, cards, daily, error, profile, ready, session, settingsFrom, summaries, tab]);

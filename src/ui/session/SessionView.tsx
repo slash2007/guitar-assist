@@ -16,6 +16,7 @@ import { useMediaQuery } from "../useMediaQuery";
 import { useT } from "../useT";
 
 const PHONE_LANDSCAPE = "(orientation: landscape) and (max-height: 560px)";
+const PREPARE_MS = 500;
 
 interface Feedback {
   correct: boolean;
@@ -100,10 +101,22 @@ export function SessionView() {
       return;
     }
     if (!profile.speechEnabled) {
-      const now = Date.now();
-      armedAtRef.current = now;
-      setArmedAt(now);
-      return;
+      const arm = () => {
+        const now = Date.now();
+        armedAtRef.current = now;
+        setArmedAt(now);
+      };
+      if (!session.prepare) {
+        arm();
+        return;
+      }
+      if (secRef.current) {
+        secRef.current.textContent = translate(locale, "session.timer", {
+          n: Math.ceil(questionTimeoutMs / 1000),
+        });
+      }
+      const id = window.setTimeout(arm, PREPARE_MS);
+      return () => window.clearTimeout(id);
     }
     let alive = true;
     void speak(spokenPrompt(question, locale), locale).then((status) => {
@@ -151,7 +164,7 @@ export function SessionView() {
     }, Math.max(0, remain));
     return () => window.clearTimeout(id);
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [armedAt, session?.index, feedback, question?.kind, questionTimeoutMs]);
+  }, [armedAt, session?.index, session?.paused, feedback, question?.kind, questionTimeoutMs]);
 
   if (!session) return null;
   if (!question) {
@@ -169,7 +182,14 @@ export function SessionView() {
     ? feedback.marks
     : question.kind === "identify"
       ? [{ string: question.string, fret: question.fret, tone: "target" }]
-      : picked.map((spot) => ({ ...spot, tone: "correct" as const }));
+      : [
+          ...(import.meta.env.DEV
+            ? question.pool
+                .filter((spot) => !picked.some((item) => sameSpot(item, spot)))
+                .map((spot) => ({ ...spot, tone: "peek" as const }))
+            : []),
+          ...picked.map((spot) => ({ ...spot, tone: "correct" as const })),
+        ];
 
   function measureLatency(timedOut: boolean): number {
     if (timedOut) return questionTimeoutMs;
@@ -345,11 +365,12 @@ export function SessionView() {
                   : option === feedback.picked
                     ? "is-wrong"
                     : "";
+            const hinted = import.meta.env.DEV && !feedback && option === question.answer;
             return (
               <button
                 key={option}
                 type="button"
-                className={`choice ${sharp ? "is-sharp" : "is-natural"} ${state}`}
+                className={`choice ${sharp ? "is-sharp" : "is-natural"} ${state}${hinted ? " is-dev-hint" : ""}`}
                 style={{ gridColumn: `${PIANO_COL[option]} / span 2` }}
                 disabled={Boolean(feedback)}
                 onClick={() => void finishIdentify(option)}

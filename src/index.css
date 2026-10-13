@@ -170,6 +170,8 @@ h2 {
 }
 
 .session-bar {
+  position: relative;
+  z-index: 2;
   display: flex;
   justify-content: space-between;
   align-items: flex-start;
@@ -690,6 +692,15 @@ h2 {
   transform: translateY(1px);
 }
 
+.choice.is-natural.is-dev-hint,
+.choice.is-sharp.is-dev-hint {
+  z-index: 6;
+  border-color: var(--accent-2);
+  box-shadow:
+    0 0 0 2px var(--accent-2),
+    0 0 18px 3px color-mix(in srgb, var(--accent-2) 50%, transparent);
+}
+
 .choice.is-natural.is-correct {
   z-index: 1;
   background: #d5eadc;
@@ -1021,6 +1032,14 @@ h2 {
     background: linear-gradient(#2a2b30, #141518);
     transform: translateY(-3px);
     box-shadow: 0 8px 14px rgba(0, 0, 0, 0.45);
+  }
+
+  .choice.is-natural.is-dev-hint:hover:not(:disabled),
+  .choice.is-sharp.is-dev-hint:hover:not(:disabled) {
+    border-color: var(--accent-2);
+    box-shadow:
+      0 0 0 2px var(--accent-2),
+      0 0 18px 3px color-mix(in srgb, var(--accent-2) 50%, transparent);
   }
 
   .fretboard-hit:hover {
