@@ -1334,14 +1334,14 @@ body:has(.session.is-immersive),
   min-height: 0;
   overflow: visible;
   display: flex;
-  align-items: center;
+  align-items: flex-end;
   justify-content: center;
 }
 
 .session.is-immersive .fretboard {
   display: block;
   width: 100%;
-  height: 100%;
+  height: auto;
   max-width: 100%;
   max-height: 100%;
 }
@@ -1356,26 +1356,15 @@ body:has(.session.is-immersive),
 }
 
 .session.is-immersive .choice.is-natural {
-  min-height: 56px;
+  min-height: 48px;
   padding-bottom: 6px;
   font-size: 0.82rem;
 }
 
 .session.is-immersive .choice.is-sharp {
-  min-height: 34px;
-  margin-bottom: -28px;
+  min-height: 30px;
+  margin-bottom: -24px;
   width: 72%;
   padding: 0 2px 4px;
   font-size: 0.66rem;
-}
-
-@media (orientation: landscape) and (max-height: 560px) {
-  .session.is-immersive .choice.is-natural {
-    min-height: 48px;
-  }
-
-  .session.is-immersive .choice.is-sharp {
-    min-height: 30px;
-    margin-bottom: -24px;
-  }
 }

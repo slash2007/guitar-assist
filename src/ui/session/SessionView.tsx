@@ -60,15 +60,7 @@ export function SessionView() {
 
   const [armedAt, setArmedAt] = useState<number | null>(null);
   const armedAtRef = useRef<number | null>(null);
-  const phoneLandscape = useMediaQuery(PHONE_LANDSCAPE);
-  const [immerseOverride, setImmerseOverride] = useState<boolean | null>(null);
-  const wasLandscape = useRef(phoneLandscape);
-  const immersive = immerseOverride ?? phoneLandscape;
-
-  useEffect(() => {
-    if (wasLandscape.current && !phoneLandscape) setImmerseOverride(null);
-    wasLandscape.current = phoneLandscape;
-  }, [phoneLandscape]);
+  const immersive = useMediaQuery(PHONE_LANDSCAPE);
 
   const question = session?.questions[session.index];
   const timing = timingFor(profile.guitarInHand);
@@ -295,13 +287,6 @@ export function SessionView() {
           </p>
         </div>
         <div className="header-actions">
-          <button
-            type="button"
-            className="text-btn"
-            onClick={() => setImmerseOverride(immersive ? false : true)}
-          >
-            {immersive ? t("session.immerseExit") : t("session.immerse")}
-          </button>
           <button type="button" className="text-btn" onClick={() => void exitSession()}>
             {t("session.later")}
           </button>

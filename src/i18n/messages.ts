@@ -142,8 +142,6 @@ export const zh = {
   "session.verdictMiss": "错",
   "session.noQueue": "暂时没有可练的题。",
   "session.timer": "{n} 秒",
-  "session.immerse": "沉浸",
-  "session.immerseExit": "还原",
 
   "cue.locateOne": "找 {note}",
   "cue.locateAll": "找齐 {note}",
@@ -350,8 +348,6 @@ export const en: { [K in MessageKey]: string } = {
   "session.verdictMiss": "Wrong",
   "session.noQueue": "Nothing to practice right now.",
   "session.timer": "{n}s",
-  "session.immerse": "Focus",
-  "session.immerseExit": "Exit",
 
   "cue.locateOne": "Find {note}",
   "cue.locateAll": "Every {note}",
