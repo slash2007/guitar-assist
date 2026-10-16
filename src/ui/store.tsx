@@ -194,6 +194,7 @@ export function StoreProvider({ children }: { children: ReactNode }) {
         setError(null);
         setDaily(today);
         await Promise.all([writeSession(next), db.saveDaily(today)]);
+        track("practice_start", { from: "start", stage: profile.stage });
       },
       async commitAnswer(input) {
         if (!session) return { ended: false, summary: null };
@@ -324,6 +325,7 @@ export function StoreProvider({ children }: { children: ReactNode }) {
         primeOutput();
         const now = new Date();
         await writeSession({ ...clipped, paused: false, questionShownAt: now.toISOString(), prepare: true });
+        track("practice_start", { from: "resume", stage: profile.stage });
       },
       async exitSession() {
         const current = sessionRef.current;
