@@ -13,7 +13,7 @@ type UmamiTracker = {
 };
 
 function tracker(): UmamiTracker | null {
-  const umami = (window as Window & { umami?: UmamiTracker }).umami;
+  const umami = (globalThis as typeof globalThis & { umami?: UmamiTracker }).umami;
   if (!umami || typeof umami.track !== "function") return null;
   return umami;
 }
